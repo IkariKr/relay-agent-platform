@@ -109,6 +109,8 @@ Before accepting Claude's result, verify:
 
 Use `scripts/run_claude_delegate.ps1` for repeatable Claude invocation. It prints Claude output, captures stdout/stderr logs under the system temp directory, returns Claude's exit code, and prints the post-run git status summary. It never stages or commits files.
 
+Each wrapper invocation gets a unique `RunId` and unique stdout/stderr log files. Idle detection is based only on the Claude process started by that invocation and its own logs, so concurrent Claude runs must not affect each other's idle status.
+
 Script status behavior:
 - `0`: Claude completed successfully.
 - `124`: Claude exceeded `-TimeoutSeconds`; the wrapper killed the process tree.

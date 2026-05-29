@@ -152,9 +152,10 @@ $resolvedWorkdir = (Resolve-Path -LiteralPath $Workdir).Path
 $claudePath = Resolve-CommandPath -CommandName "claude"
 $gitPath = Get-Command git -ErrorAction SilentlyContinue
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$runId = [System.Guid]::NewGuid().ToString("N").Substring(0, 12)
 $logRoot = Join-Path ([System.IO.Path]::GetTempPath()) "codex-delegate-claude"
-$stdoutLog = Join-Path $logRoot "claude-$timestamp.stdout.log"
-$stderrLog = Join-Path $logRoot "claude-$timestamp.stderr.log"
+$stdoutLog = Join-Path $logRoot "claude-$timestamp-$runId.stdout.log"
+$stderrLog = Join-Path $logRoot "claude-$timestamp-$runId.stderr.log"
 
 $claudeArgs = @(
     "-p",
@@ -165,6 +166,7 @@ $claudeArgs = @(
 
 Write-Host "Workdir: $resolvedWorkdir"
 Write-Host "Claude: $claudePath"
+Write-Host "RunId: $runId"
 Write-Host "PermissionMode: $PermissionMode"
 Write-Host "MaxTurns: $MaxTurns"
 if ($TimeoutSeconds -gt 0) {
