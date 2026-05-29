@@ -32,20 +32,32 @@ Use this skill when Codex should be the planner, reviewer, verifier, and committ
      - relevant constraints,
      - verification commands Claude should run when appropriate,
      - an instruction not to commit.
+   - Use timeout controls for non-trivial tasks:
+     ```powershell
+     & "$env:CODEX_HOME\skills\codex-delegate-claude\scripts\run_claude_delegate.ps1" -Prompt "<implementation prompt>" -TimeoutSeconds 1800 -IdleTimeoutSeconds 600 -PollSeconds 15
+     ```
 
-4. Review Claude's changes.
+4. Handle stalled Claude runs.
+   - Treat exit code `124` as total timeout and exit code `125` as idle timeout.
+   - When Claude times out or produces no output past the idle limit, the wrapper kills the Claude process tree.
+   - After a timeout, immediately inspect `git status --short` and `git diff`.
+   - If Claude produced useful partial edits, review and verify them before deciding whether to continue.
+   - If partial edits are unsafe, incomplete, or hard to separate from unrelated work, stop and report the blocker.
+   - If continuing, send a narrower correction prompt that mentions the timeout and constrains the next attempt.
+
+5. Review Claude's changes.
    - Inspect `git status --short` and `git diff`.
    - Check for scope drift, unrelated edits, missing tests, broken public interfaces, and unsafe behavior.
    - Run the smallest meaningful verification commands that can prove the change.
    - Treat Claude's summary as advisory only; Codex must verify from the working tree.
 
-5. Retry only with concrete findings.
+6. Retry only with concrete findings.
    - If the result is incorrect or incomplete, send Claude a targeted correction prompt.
    - Include exact review findings, failing commands, and the expected fix.
    - Keep a default limit of 3 total Claude attempts unless the user requested a longer loop.
    - Stop and report the blocker if repeated attempts fail for the same reason.
 
-6. Commit only after Codex approval.
+7. Commit only after Codex approval.
    - Stage only files from the current delegation cycle that Codex has reviewed.
    - Do not stage unrelated pre-existing dirty files.
    - If Claude touched a file that was already dirty before the cycle, inspect hunks carefully.
@@ -89,7 +101,20 @@ Before accepting Claude's result, verify:
 - Existing dirty files were not accidentally folded into the delegated change.
 - Tests or checks cover the changed behavior, or the remaining risk is explicitly acceptable.
 - The final commit contains only reviewed, intended changes from this delegation cycle.
+- Timeout or idle-stop runs were followed by diff inspection before any retry or commit.
 
 ## Bundled Script
 
 Use `scripts/run_claude_delegate.ps1` for repeatable Claude invocation. It prints Claude output, captures stdout/stderr logs under the system temp directory, returns Claude's exit code, and prints the post-run git status summary. It never stages or commits files.
+
+Script status behavior:
+- `0`: Claude completed successfully.
+- `124`: Claude exceeded `-TimeoutSeconds`; the wrapper killed the process tree.
+- `125`: Claude produced no stdout/stderr for `-IdleTimeoutSeconds`; the wrapper killed the process tree.
+- Any other non-zero code: Claude failed or was interrupted.
+
+Default controls:
+- `-TimeoutSeconds 1800`
+- `-IdleTimeoutSeconds 600`
+- `-PollSeconds 15`
+- `-MaxTurns 3`

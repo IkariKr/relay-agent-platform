@@ -10,6 +10,15 @@ param(
     [ValidateSet("acceptEdits", "bypassPermissions", "default", "delegate", "dontAsk", "plan")]
     [string]$PermissionMode = "acceptEdits",
 
+    [ValidateRange(30, 86400)]
+    [int]$TimeoutSeconds = 1800,
+
+    [ValidateRange(30, 86400)]
+    [int]$IdleTimeoutSeconds = 600,
+
+    [ValidateRange(1, 300)]
+    [int]$PollSeconds = 15,
+
     [switch]$WhatIf
 )
 
@@ -24,6 +33,109 @@ function Resolve-CommandPath {
     }
 
     return $command.Source
+}
+
+function Stop-ProcessTree {
+    param([int]$ProcessId)
+
+    $taskkill = Get-Command taskkill.exe -ErrorAction SilentlyContinue
+    if ($taskkill) {
+        & $taskkill.Source /PID $ProcessId /T /F | Out-Host
+        return
+    }
+
+    $process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+    if ($process) {
+        Stop-Process -Id $ProcessId -Force
+    }
+}
+
+function Join-ProcessArguments {
+    param([string[]]$Arguments)
+
+    $escaped = foreach ($argument in $Arguments) {
+        if ($argument -match '[\s"]') {
+            '"' + ($argument -replace '"', '\"') + '"'
+        } else {
+            $argument
+        }
+    }
+
+    return ($escaped -join " ")
+}
+
+function Invoke-ClaudeAttempt {
+    param(
+        [string]$FilePath,
+        [string[]]$Arguments,
+        [string]$StdoutPath,
+        [string]$StderrPath,
+        [int]$Timeout,
+        [int]$IdleTimeout,
+        [int]$Poll
+    )
+
+    $startTime = Get-Date
+    $lastActivityTime = $startTime
+    $lastStatusTime = $startTime.AddSeconds(-1 * $Poll)
+    $lastStdoutLength = 0
+    $lastStderrLength = 0
+
+    try {
+        $argumentLine = Join-ProcessArguments -Arguments $Arguments
+        $process = Start-Process `
+            -FilePath $FilePath `
+            -ArgumentList $argumentLine `
+            -WorkingDirectory (Get-Location).Path `
+            -RedirectStandardOutput $StdoutPath `
+            -RedirectStandardError $StderrPath `
+            -NoNewWindow `
+            -PassThru
+
+        Write-Host "Claude PID: $($process.Id)"
+
+        while (-not $process.HasExited) {
+            Start-Sleep -Seconds $Poll
+
+            $now = Get-Date
+            $elapsedSeconds = [int]($now - $startTime).TotalSeconds
+            $stdoutLength = if (Test-Path -LiteralPath $StdoutPath) { (Get-Item -LiteralPath $StdoutPath).Length } else { 0 }
+            $stderrLength = if (Test-Path -LiteralPath $StderrPath) { (Get-Item -LiteralPath $StderrPath).Length } else { 0 }
+
+            if ($stdoutLength -ne $lastStdoutLength -or $stderrLength -ne $lastStderrLength) {
+                $lastActivityTime = $now
+                $lastStdoutLength = $stdoutLength
+                $lastStderrLength = $stderrLength
+            }
+
+            $idleSeconds = [int]($now - $lastActivityTime).TotalSeconds
+
+            if (($now - $lastStatusTime).TotalSeconds -ge $Poll) {
+                Write-Host "Claude still running: elapsed=${elapsedSeconds}s idle=${idleSeconds}s pid=$($process.Id)"
+                $lastStatusTime = $now
+            }
+
+            if ($elapsedSeconds -ge $Timeout) {
+                Write-Warning "Claude exceeded TimeoutSeconds=$Timeout. Killing process tree and returning exit code 124."
+                Stop-ProcessTree -ProcessId $process.Id
+                return 124
+            }
+
+            if ($idleSeconds -ge $IdleTimeout) {
+                Write-Warning "Claude produced no output for IdleTimeoutSeconds=$IdleTimeout. Killing process tree and returning exit code 125."
+                Stop-ProcessTree -ProcessId $process.Id
+                return 125
+            }
+        }
+
+        $process.WaitForExit()
+        return $process.ExitCode
+    }
+    finally {
+        if ($null -ne $process -and -not $process.HasExited) {
+            Stop-ProcessTree -ProcessId $process.Id
+        }
+    }
 }
 
 $resolvedWorkdir = (Resolve-Path -LiteralPath $Workdir).Path
@@ -45,6 +157,9 @@ Write-Host "Workdir: $resolvedWorkdir"
 Write-Host "Claude: $claudePath"
 Write-Host "PermissionMode: $PermissionMode"
 Write-Host "MaxTurns: $MaxTurns"
+Write-Host "TimeoutSeconds: $TimeoutSeconds"
+Write-Host "IdleTimeoutSeconds: $IdleTimeoutSeconds"
+Write-Host "PollSeconds: $PollSeconds"
 Write-Host "StdoutLog: $stdoutLog"
 Write-Host "StderrLog: $stderrLog"
 
@@ -66,10 +181,21 @@ try {
     while ($attempt -le $MaxTurns) {
         Write-Host "Claude attempt $attempt of $MaxTurns"
 
-        & $claudePath @claudeArgs 1>> $stdoutLog 2>> $stderrLog
-        $exitCode = $LASTEXITCODE
+        $exitCode = Invoke-ClaudeAttempt `
+            -FilePath $claudePath `
+            -Arguments $claudeArgs `
+            -StdoutPath $stdoutLog `
+            -StderrPath $stderrLog `
+            -Timeout $TimeoutSeconds `
+            -IdleTimeout $IdleTimeoutSeconds `
+            -Poll $PollSeconds
 
         if ($exitCode -eq 0) {
+            break
+        }
+
+        if ($exitCode -eq 124 -or $exitCode -eq 125) {
+            Write-Warning "Claude was stopped due to timeout/idle detection. Codex should inspect the diff before deciding whether to continue."
             break
         }
 
