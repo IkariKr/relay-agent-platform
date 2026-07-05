@@ -2,6 +2,10 @@
 
 This repository keeps one live Claude skill at the root, while adding shared sources for multiple delegation backends.
 
+Related planning documents:
+
+- `docs/v1-roadmap.md`: public release scope, milestones, and acceptance criteria for `v1`.
+
 ## Layout
 
 - `shared/`: single source of truth for reusable docs and PowerShell helpers.
