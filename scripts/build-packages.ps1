@@ -128,6 +128,9 @@ Copy-BackendScript `
     -SourcePath (Join-Path $backendRoot "agent\manage_auto_routing.ps1") `
     -DestinationPath (Join-Path $agentPackageRoot "scripts\manage_auto_routing.ps1")
 Copy-BackendScript `
+    -SourcePath (Join-Path $backendRoot "agent\manage_auto_routing_nl.ps1") `
+    -DestinationPath (Join-Path $agentPackageRoot "scripts\manage_auto_routing_nl.ps1")
+Copy-BackendScript `
     -SourcePath (Join-Path $backendRoot "agent\AutoRoutingCommon.psm1") `
     -DestinationPath (Join-Path $agentPackageRoot "scripts\AutoRoutingCommon.psm1")
 Copy-BackendScript `

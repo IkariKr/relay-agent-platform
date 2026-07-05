@@ -8,12 +8,14 @@ $requiredFiles = @(
     "backends\opencode\run_opencode_delegate.ps1",
     "backends\agent\run_delegate_agent.ps1",
     "backends\agent\manage_auto_routing.ps1",
+    "backends\agent\manage_auto_routing_nl.ps1",
     "backends\agent\AutoRoutingCommon.psm1",
     "backends\agent\auto-routing.default.json",
     "packages\codex-delegate-opencode\scripts\run_opencode_delegate.ps1",
     "packages\codex-delegate-opencode\shared\scripts\DelegateCommon.psm1",
     "packages\codex-delegate-agent\scripts\run_delegate_agent.ps1",
     "packages\codex-delegate-agent\scripts\manage_auto_routing.ps1",
+    "packages\codex-delegate-agent\scripts\manage_auto_routing_nl.ps1",
     "packages\codex-delegate-agent\scripts\AutoRoutingCommon.psm1",
     "packages\codex-delegate-agent\scripts\run_claude_delegate.ps1",
     "packages\codex-delegate-agent\scripts\run_opencode_delegate.ps1",
@@ -66,6 +68,12 @@ $agentManageSource = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "backend
 $agentManagePackage = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "packages\codex-delegate-agent\scripts\manage_auto_routing.ps1")
 if ($agentManageSource -ne $agentManagePackage) {
     Write-Error "Unified agent routing management script is out of sync. Run scripts/build-packages.ps1."
+}
+
+$agentManageNlSource = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "backends\agent\manage_auto_routing_nl.ps1")
+$agentManageNlPackage = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "packages\codex-delegate-agent\scripts\manage_auto_routing_nl.ps1")
+if ($agentManageNlSource -ne $agentManageNlPackage) {
+    Write-Error "Unified agent natural-language routing management script is out of sync. Run scripts/build-packages.ps1."
 }
 
 $agentRoutingModuleSource = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "backends\agent\AutoRoutingCommon.psm1")
