@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Delegate OpenCode"
+  short_description: "Delegate coding work to OpenCode, then review"
+  default_prompt: "Use $codex-delegate-opencode to delegate this coding task to OpenCode, review the diff, and commit only verified changes."
