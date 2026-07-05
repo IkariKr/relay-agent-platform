@@ -42,149 +42,14 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-
-function Resolve-CommandPath {
-    param([string]$CommandName)
-
-    $command = Get-Command $CommandName -ErrorAction SilentlyContinue
-    if (-not $command) {
-        throw "Required command '$CommandName' was not found on PATH."
-    }
-
-    # npm global binaries on Windows are often surfaced as .ps1 wrappers in
-    # PowerShell. Start-Process cannot launch those directly, so prefer a
-    # sibling .cmd or .exe launcher when available.
-    if (
-        $command.CommandType -eq "ExternalScript" -and
-        [System.IO.Path]::GetExtension($command.Source).Equals(".ps1", [System.StringComparison]::OrdinalIgnoreCase)
-    ) {
-        $scriptPath = $command.Source
-        $basePath = Join-Path `
-            ([System.IO.Path]::GetDirectoryName($scriptPath)) `
-            ([System.IO.Path]::GetFileNameWithoutExtension($scriptPath))
-        foreach ($candidate in @("$basePath.cmd", "$basePath.exe")) {
-            if (Test-Path -LiteralPath $candidate) {
-                return $candidate
-            }
-        }
-    }
-
-    return $command.Source
-}
-
-function Stop-ProcessTree {
-    param([int]$ProcessId)
-
-    $taskkill = Get-Command taskkill.exe -ErrorAction SilentlyContinue
-    if ($taskkill) {
-        & $taskkill.Source /PID $ProcessId /T /F | Out-Host
-        return
-    }
-
-    $process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
-    if ($process) {
-        Stop-Process -Id $ProcessId -Force
-    }
-}
-
-function Join-ProcessArguments {
-    param([string[]]$Arguments)
-
-    $escaped = foreach ($argument in $Arguments) {
-        if ($argument -match '[\s"]') {
-            '"' + ($argument -replace '"', '\"') + '"'
-        } else {
-            $argument
-        }
-    }
-
-    return ($escaped -join " ")
-}
-
-function Invoke-ClaudeAttempt {
-    param(
-        [string]$FilePath,
-        [string[]]$Arguments,
-        [string]$StdoutPath,
-        [string]$StderrPath,
-        [int]$Timeout,
-        [int]$IdleTimeout,
-        [int]$Poll,
-        [int]$StatusInterval
-    )
-
-    $startTime = Get-Date
-    $lastActivityTime = $startTime
-    $lastStatusTime = $startTime
-    $lastStdoutLength = 0
-    $lastStderrLength = 0
-
-    try {
-        $argumentLine = Join-ProcessArguments -Arguments $Arguments
-        $process = Start-Process `
-            -FilePath $FilePath `
-            -ArgumentList $argumentLine `
-            -WorkingDirectory (Get-Location).Path `
-            -RedirectStandardOutput $StdoutPath `
-            -RedirectStandardError $StderrPath `
-            -NoNewWindow `
-            -PassThru
-
-        Write-Host "Claude PID: $($process.Id)"
-
-        while (-not $process.HasExited) {
-            $waitMilliseconds = [Math]::Min($Poll * 1000, 1000)
-            [void]$process.WaitForExit($waitMilliseconds)
-
-            $now = Get-Date
-            $elapsedSeconds = [int]($now - $startTime).TotalSeconds
-            $stdoutLength = if (Test-Path -LiteralPath $StdoutPath) { (Get-Item -LiteralPath $StdoutPath).Length } else { 0 }
-            $stderrLength = if (Test-Path -LiteralPath $StderrPath) { (Get-Item -LiteralPath $StderrPath).Length } else { 0 }
-
-            if ($stdoutLength -ne $lastStdoutLength -or $stderrLength -ne $lastStderrLength) {
-                $lastActivityTime = $now
-                $lastStdoutLength = $stdoutLength
-                $lastStderrLength = $stderrLength
-            }
-
-            $idleSeconds = [int]($now - $lastActivityTime).TotalSeconds
-
-            if (($now - $lastStatusTime).TotalSeconds -ge $StatusInterval) {
-                Write-Host "Claude still running: elapsed=${elapsedSeconds}s idle=${idleSeconds}s pid=$($process.Id)"
-                $lastStatusTime = $now
-            }
-
-            if ($Timeout -gt 0 -and $elapsedSeconds -ge $Timeout) {
-                Write-Warning "Claude exceeded TimeoutSeconds=$Timeout. Killing process tree and returning exit code 124."
-                Stop-ProcessTree -ProcessId $process.Id
-                return 124
-            }
-
-            if ($idleSeconds -ge $IdleTimeout) {
-                Write-Warning "Claude produced no output for IdleTimeoutSeconds=$IdleTimeout. Killing process tree and returning exit code 125."
-                Stop-ProcessTree -ProcessId $process.Id
-                return 125
-            }
-        }
-
-        $process.WaitForExit()
-        return $process.ExitCode
-    }
-    finally {
-        if ($null -ne $process -and -not $process.HasExited) {
-            Stop-ProcessTree -ProcessId $process.Id
-        }
-    }
-}
+$modulePath = Join-Path $PSScriptRoot "..\shared\scripts\DelegateCommon.psm1"
+Import-Module $modulePath -Force
 
 $resolvedWorkdir = (Resolve-Path -LiteralPath $Workdir).Path
-$claudePath = Resolve-CommandPath -CommandName "claude"
-$gitPath = Get-Command git -ErrorAction SilentlyContinue
-$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$runId = [System.Guid]::NewGuid().ToString("N").Substring(0, 12)
-$logRoot = Join-Path ([System.IO.Path]::GetTempPath()) "codex-delegate-claude"
-$stdoutLog = Join-Path $logRoot "claude-$timestamp-$runId.stdout.log"
-$stderrLog = Join-Path $logRoot "claude-$timestamp-$runId.stderr.log"
+$claudePath = Resolve-DelegateCommandPath -CommandName "claude"
+$runContext = New-DelegateRunContext -BackendName "codex-delegate-claude"
+$stdoutLog = Join-Path $runContext.LogRoot "claude-$($runContext.Timestamp)-$($runContext.RunId).stdout.log"
+$stderrLog = Join-Path $runContext.LogRoot "claude-$($runContext.Timestamp)-$($runContext.RunId).stderr.log"
 
 $effectiveDisallowedTools = @($DisallowedTools | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 if ($AllowBash) {
@@ -219,7 +84,7 @@ $claudeArgs += $Prompt
 
 Write-Host "Workdir: $resolvedWorkdir"
 Write-Host "Claude: $claudePath"
-Write-Host "RunId: $runId"
+Write-Host "RunId: $($runContext.RunId)"
 Write-Host "PermissionMode: $PermissionMode"
 Write-Host "OutputFormat: $OutputFormat"
 Write-Host "AllowedTools: $(if ($AllowedTools.Count -gt 0) { $AllowedTools -join ',' } else { 'default' })"
@@ -245,10 +110,6 @@ if ($WhatIf) {
     exit 0
 }
 
-if (-not (Test-Path -LiteralPath $logRoot)) {
-    New-Item -ItemType Directory -Path $logRoot | Out-Null
-}
-
 Push-Location -LiteralPath $resolvedWorkdir
 try {
     $attempt = 1
@@ -257,7 +118,8 @@ try {
     while ($attempt -le $MaxTurns) {
         Write-Host "Claude attempt $attempt of $MaxTurns"
 
-        $exitCode = Invoke-ClaudeAttempt `
+        $exitCode = Invoke-DelegateAttempt `
+            -Label "Claude" `
             -FilePath $claudePath `
             -Arguments $claudeArgs `
             -StdoutPath $stdoutLog `
@@ -284,41 +146,8 @@ try {
         $attempt++
     }
 
-    Write-Host ""
-    if ($FullLog) {
-        Write-Host "Claude stdout:"
-    } else {
-        Write-Host "Claude stdout tail ($TailLines lines):"
-    }
-    if (Test-Path -LiteralPath $stdoutLog) {
-        if ($FullLog) {
-            Get-Content -LiteralPath $stdoutLog
-        } else {
-            Get-Content -LiteralPath $stdoutLog -Tail $TailLines
-        }
-    }
-
-    Write-Host ""
-    if ($FullLog) {
-        Write-Host "Claude stderr:"
-    } else {
-        Write-Host "Claude stderr tail ($TailLines lines):"
-    }
-    if (Test-Path -LiteralPath $stderrLog) {
-        if ($FullLog) {
-            Get-Content -LiteralPath $stderrLog
-        } else {
-            Get-Content -LiteralPath $stderrLog -Tail $TailLines
-        }
-    }
-
-    Write-Host ""
-    Write-Host "Post-run git status:"
-    if ($gitPath) {
-        & $gitPath.Source status --short
-    } else {
-        Write-Host "git not found on PATH."
-    }
+    Write-DelegateLogs -Label "Claude" -StdoutPath $stdoutLog -StderrPath $stderrLog -TailLines $TailLines -FullLog ([bool]$FullLog)
+    Write-DelegatePostRunStatus -Workdir $resolvedWorkdir
 
     exit $exitCode
 }

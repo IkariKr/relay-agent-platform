@@ -1,0 +1,31 @@
+## Workflow
+
+1. Define the finish line.
+   - Restate the user goal, deliverable, success criteria, and constraints.
+   - Identify the relevant files, commands, and likely tests before delegating.
+   - Keep the implementation prompt narrow enough that the worker does not need to infer scope.
+
+2. Record the baseline.
+   - Run `git status --short` before delegation.
+   - Separate pre-existing dirty files from files expected to change.
+   - If the project is not a git worktree, continue without commit behavior and state that limitation.
+
+3. Delegate one bounded implementation attempt.
+   - Use the backend wrapper for exactly one prompt-driven execution cycle.
+   - Include the exact user goal, editable scope, constraints, verification commands, and an instruction not to commit.
+   - Prefer idle timeout over wall-clock timeout for larger edits.
+
+4. Inspect timeouts before retrying.
+   - Treat exit code `124` as total timeout and `125` as idle timeout.
+   - Inspect `git status --short` and `git diff` immediately after a stop.
+   - Retry only with a narrower correction prompt when the partial result is still useful.
+
+5. Review the changes yourself.
+   - Check for scope drift, unrelated edits, missing tests, broken interfaces, and unsafe behavior.
+   - Run the smallest meaningful verification commands that can prove the change.
+   - Treat the worker summary as advisory only.
+
+6. Commit only after review.
+   - Stage only reviewed files from the current delegation cycle.
+   - Do not stage unrelated pre-existing worktree changes.
+   - If a file was already dirty, isolate hunks carefully or stop and ask the user.
