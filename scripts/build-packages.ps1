@@ -6,6 +6,7 @@ $sharedRoot = Join-Path $repoRoot "shared"
 $backendRoot = Join-Path $repoRoot "backends"
 $packageRoot = Join-Path $repoRoot "packages"
 $opencodePackageRoot = Join-Path $packageRoot "codex-delegate-opencode"
+$agentPackageRoot = Join-Path $packageRoot "codex-delegate-agent"
 
 function Get-BackendMetadata {
     param([Parameter(Mandatory = $true)][string]$Backend)
@@ -71,6 +72,16 @@ function Sync-SharedModule {
         -Force
 }
 
+function Copy-BackendScript {
+    param(
+        [Parameter(Mandatory = $true)][string]$SourcePath,
+        [Parameter(Mandatory = $true)][string]$DestinationPath
+    )
+
+    Ensure-Directory -Path (Split-Path -Parent $DestinationPath)
+    Copy-Item -LiteralPath $SourcePath -Destination $DestinationPath -Force
+}
+
 function Write-PackageFiles {
     param(
         [Parameter(Mandatory = $true)][string]$Backend,
@@ -89,11 +100,28 @@ function Write-PackageFiles {
 Ensure-Directory -Path $packageRoot
 Ensure-Directory -Path (Join-Path $opencodePackageRoot "scripts")
 Ensure-Directory -Path (Join-Path $opencodePackageRoot "agents")
+Ensure-Directory -Path (Join-Path $agentPackageRoot "scripts")
+Ensure-Directory -Path (Join-Path $agentPackageRoot "agents")
 
 Write-PackageFiles -Backend "claude" -SkillRoot $repoRoot
 Write-PackageFiles -Backend "opencode" -SkillRoot $opencodePackageRoot
+Write-PackageFiles -Backend "agent" -SkillRoot $agentPackageRoot
 Sync-SharedModule -DestinationPackageRoot $opencodePackageRoot
+Sync-SharedModule -DestinationPackageRoot $agentPackageRoot
+Copy-BackendScript `
+    -SourcePath (Join-Path $backendRoot "opencode\run_opencode_delegate.ps1") `
+    -DestinationPath (Join-Path $opencodePackageRoot "scripts\run_opencode_delegate.ps1")
+Copy-BackendScript `
+    -SourcePath (Join-Path $backendRoot "agent\run_delegate_agent.ps1") `
+    -DestinationPath (Join-Path $agentPackageRoot "scripts\run_delegate_agent.ps1")
+Copy-BackendScript `
+    -SourcePath (Join-Path $repoRoot "scripts\run_claude_delegate.ps1") `
+    -DestinationPath (Join-Path $agentPackageRoot "scripts\run_claude_delegate.ps1")
+Copy-BackendScript `
+    -SourcePath (Join-Path $backendRoot "opencode\run_opencode_delegate.ps1") `
+    -DestinationPath (Join-Path $agentPackageRoot "scripts\run_opencode_delegate.ps1")
 
 Write-Host "Generated root Claude package metadata."
 Write-Host "Generated OpenCode package metadata."
-Write-Host "Synced shared module into packages/codex-delegate-opencode/shared/scripts."
+Write-Host "Generated unified agent package metadata."
+Write-Host "Synced shared module into generated packages."

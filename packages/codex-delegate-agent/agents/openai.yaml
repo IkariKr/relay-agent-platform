@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Delegate Agent"
+  short_description: "Route coding work to Claude or OpenCode, then review"
+  default_prompt: "Use $codex-delegate-agent to choose the right backend, delegate this coding task, review the diff, and commit only verified changes."

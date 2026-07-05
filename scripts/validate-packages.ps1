@@ -5,12 +5,20 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $requiredFiles = @(
     "shared\scripts\DelegateCommon.psm1",
     "scripts\run_claude_delegate.ps1",
+    "backends\opencode\run_opencode_delegate.ps1",
+    "backends\agent\run_delegate_agent.ps1",
     "packages\codex-delegate-opencode\scripts\run_opencode_delegate.ps1",
     "packages\codex-delegate-opencode\shared\scripts\DelegateCommon.psm1",
+    "packages\codex-delegate-agent\scripts\run_delegate_agent.ps1",
+    "packages\codex-delegate-agent\scripts\run_claude_delegate.ps1",
+    "packages\codex-delegate-agent\scripts\run_opencode_delegate.ps1",
+    "packages\codex-delegate-agent\shared\scripts\DelegateCommon.psm1",
     "SKILL.md",
     "agents\openai.yaml",
     "packages\codex-delegate-opencode\SKILL.md",
-    "packages\codex-delegate-opencode\agents\openai.yaml"
+    "packages\codex-delegate-opencode\agents\openai.yaml",
+    "packages\codex-delegate-agent\SKILL.md",
+    "packages\codex-delegate-agent\agents\openai.yaml"
 )
 
 $missing = @()
@@ -29,6 +37,23 @@ $rootModule = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "shared\scripts
 $packageModule = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "packages\codex-delegate-opencode\shared\scripts\DelegateCommon.psm1")
 if ($rootModule -ne $packageModule) {
     Write-Error "Shared module copy is out of sync. Run scripts/build-packages.ps1."
+}
+
+$agentModule = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "packages\codex-delegate-agent\shared\scripts\DelegateCommon.psm1")
+if ($rootModule -ne $agentModule) {
+    Write-Error "Unified agent shared module copy is out of sync. Run scripts/build-packages.ps1."
+}
+
+$opencodeSource = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "backends\opencode\run_opencode_delegate.ps1")
+$opencodePackage = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "packages\codex-delegate-opencode\scripts\run_opencode_delegate.ps1")
+if ($opencodeSource -ne $opencodePackage) {
+    Write-Error "OpenCode package script is out of sync. Run scripts/build-packages.ps1."
+}
+
+$agentSource = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "backends\agent\run_delegate_agent.ps1")
+$agentPackage = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "packages\codex-delegate-agent\scripts\run_delegate_agent.ps1")
+if ($agentSource -ne $agentPackage) {
+    Write-Error "Unified agent package script is out of sync. Run scripts/build-packages.ps1."
 }
 
 Write-Host "Package validation passed."

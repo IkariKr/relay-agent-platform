@@ -1,0 +1,7 @@
+{
+  "name": "codex-delegate-agent",
+  "description": "Unified delegation entrypoint that routes bounded coding tasks to Claude Code or OpenCode while Codex keeps responsibility for task decomposition, review, verification, retry prompts, and git commits.",
+  "displayName": "Codex Delegate Agent",
+  "shortDescription": "Route coding work to Claude or OpenCode, then review",
+  "defaultPrompt": "Use $codex-delegate-agent to choose the right backend, delegate this coding task, review the diff, and commit only verified changes."
+}

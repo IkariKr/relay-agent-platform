@@ -1,15 +1,24 @@
 param(
-    [string]$WorkspaceSkillsDir = "D:\App\01_Ai\CodeX\skills"
+    [string]$WorkspaceSkillsDir = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$defaultWorkspaceSkillsDir = Split-Path -Parent $repoRoot
+if ([string]::IsNullOrWhiteSpace($WorkspaceSkillsDir)) {
+    $WorkspaceSkillsDir = $defaultWorkspaceSkillsDir
+}
+
 $links = @(
     @{
         Name = "codex-delegate-opencode"
         Target = Join-Path $repoRoot "packages\codex-delegate-opencode"
+    },
+    @{
+        Name = "codex-delegate-agent"
+        Target = Join-Path $repoRoot "packages\codex-delegate-agent"
     }
 )
 
