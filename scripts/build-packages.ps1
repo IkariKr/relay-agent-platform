@@ -82,6 +82,16 @@ function Copy-BackendScript {
     Copy-Item -LiteralPath $SourcePath -Destination $DestinationPath -Force
 }
 
+function Copy-BackendAsset {
+    param(
+        [Parameter(Mandatory = $true)][string]$SourcePath,
+        [Parameter(Mandatory = $true)][string]$DestinationPath
+    )
+
+    Ensure-Directory -Path (Split-Path -Parent $DestinationPath)
+    Copy-Item -LiteralPath $SourcePath -Destination $DestinationPath -Force
+}
+
 function Write-PackageFiles {
     param(
         [Parameter(Mandatory = $true)][string]$Backend,
@@ -120,6 +130,9 @@ Copy-BackendScript `
 Copy-BackendScript `
     -SourcePath (Join-Path $backendRoot "opencode\run_opencode_delegate.ps1") `
     -DestinationPath (Join-Path $agentPackageRoot "scripts\run_opencode_delegate.ps1")
+Copy-BackendAsset `
+    -SourcePath (Join-Path $backendRoot "agent\auto-routing.default.json") `
+    -DestinationPath (Join-Path $agentPackageRoot "auto-routing.default.json")
 
 Write-Host "Generated root Claude package metadata."
 Write-Host "Generated OpenCode package metadata."

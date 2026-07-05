@@ -7,12 +7,14 @@ $requiredFiles = @(
     "scripts\run_claude_delegate.ps1",
     "backends\opencode\run_opencode_delegate.ps1",
     "backends\agent\run_delegate_agent.ps1",
+    "backends\agent\auto-routing.default.json",
     "packages\codex-delegate-opencode\scripts\run_opencode_delegate.ps1",
     "packages\codex-delegate-opencode\shared\scripts\DelegateCommon.psm1",
     "packages\codex-delegate-agent\scripts\run_delegate_agent.ps1",
     "packages\codex-delegate-agent\scripts\run_claude_delegate.ps1",
     "packages\codex-delegate-agent\scripts\run_opencode_delegate.ps1",
     "packages\codex-delegate-agent\shared\scripts\DelegateCommon.psm1",
+    "packages\codex-delegate-agent\auto-routing.default.json",
     "SKILL.md",
     "agents\openai.yaml",
     "packages\codex-delegate-opencode\SKILL.md",
@@ -54,6 +56,12 @@ $agentSource = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "backends\agen
 $agentPackage = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "packages\codex-delegate-agent\scripts\run_delegate_agent.ps1")
 if ($agentSource -ne $agentPackage) {
     Write-Error "Unified agent package script is out of sync. Run scripts/build-packages.ps1."
+}
+
+$routingSource = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "backends\agent\auto-routing.default.json")
+$routingPackage = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "packages\codex-delegate-agent\auto-routing.default.json")
+if ($routingSource -ne $routingPackage) {
+    Write-Error "Unified agent routing config is out of sync. Run scripts/build-packages.ps1."
 }
 
 Write-Host "Package validation passed."

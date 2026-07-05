@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "defaults": {
+    "preferred_backend": "claude",
+    "fallback_backend": "opencode",
+    "on_no_match": "preferred_backend"
+  },
+  "rules": [
+    {
+      "name": "explicit-opencode-hint",
+      "backend": "opencode",
+      "reason": "prompt explicitly asks for OpenCode or local provider routing",
+      "when": {
+        "prompt_any_regex": [
+          "(?i)\\bopencode\\b",
+          "(?i)\\blocal model\\b",
+          "(?i)\\bprovider\\b",
+          "(?i)\\bcheap\\b",
+          "(?i)\\bfree model\\b"
+        ]
+      }
+    },
+    {
+      "name": "explicit-claude-hint",
+      "backend": "claude",
+      "reason": "prompt explicitly asks for Claude behavior or Claude-specific controls",
+      "when": {
+        "prompt_any_regex": [
+          "(?i)\\bclaude\\b",
+          "(?i)\\bsonnet\\b",
+          "(?i)\\bmax budget\\b",
+          "(?i)\\bpermission mode\\b"
+        ]
+      }
+    },
+    {
+      "name": "review-plan-docs-go-to-claude",
+      "backend": "claude",
+      "reason": "review, planning, or explanation-heavy prompts default to Claude",
+      "when": {
+        "prompt_any_regex": [
+          "(?i)\\breview\\b",
+          "(?i)\\bexplain\\b",
+          "(?i)\\bplan\\b",
+          "(?i)\\bdocs?\\b",
+          "(?i)\\barchitecture\\b",
+          "(?i)\\bdesign\\b"
+        ]
+      }
+    },
+    {
+      "name": "small-fast-code-tasks-go-to-opencode",
+      "backend": "opencode",
+      "reason": "small implementation-oriented prompts can prefer local OpenCode routing",
+      "when": {
+        "prompt_any_regex": [
+          "(?i)\\bsmall\\b",
+          "(?i)\\bquick\\b",
+          "(?i)\\bsimple\\b",
+          "(?i)\\btiny\\b",
+          "(?i)\\bminor\\b",
+          "(?i)\\bfast\\b",
+          "(?i)\\bfix\\b",
+          "(?i)\\brefactor\\b"
+        ]
+      }
+    }
+  ]
+}
