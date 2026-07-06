@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Delegate Antigravity"
+  short_description: "Delegate coding work to Antigravity, then review"
+  default_prompt: "Use $codex-delegate-antigravity to delegate this coding task to Antigravity CLI, review the diff, and commit only verified changes."

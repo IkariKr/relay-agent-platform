@@ -4,7 +4,7 @@
 
 If you are new to this repository, install and use `codex-delegate-agent` first.
 
-It is the main `v1` package because it gives you:
+It is the main package because it gives you:
 
 - one stable entrypoint
 - explicit backend override when you want it
@@ -15,17 +15,18 @@ It is the main `v1` package because it gives you:
 
 | Package | Best for | Default recommendation |
 | --- | --- | --- |
-| `codex-delegate-agent` | Users who want one entrypoint that can route to Claude or OpenCode | Yes |
+| `codex-delegate-agent` | Users who want one entrypoint that can route to Claude, OpenCode, or Antigravity | Yes |
 | `codex-delegate-claude` | Users who only want Claude-oriented delegation behavior | Conditional |
 | `codex-delegate-opencode` | Users who only want direct OpenCode/local-provider delegation | Conditional |
+| `codex-delegate-antigravity` | Users who only want direct Antigravity CLI delegation | Conditional |
 
 ## Which Package Should I Choose?
 
 ### Choose `codex-delegate-agent` if:
 
-- you want the public `v1` default
+- you want the default platform entrypoint
 - you want to start with auto routing
-- you expect to use both Claude and OpenCode over time
+- you expect to use multiple backends over time
 - you want rule management and routing explainability
 
 ### Choose `codex-delegate-claude` if:
@@ -40,6 +41,12 @@ It is the main `v1` package because it gives you:
 - you mainly use local/provider-driven models
 - you want to tune provider preference, model intent, paid fallback, or agent choice directly
 
+### Choose `codex-delegate-antigravity` if:
+
+- you want direct Antigravity execution without unified routing
+- you prefer the current `agy --print` style flow for bounded non-interactive runs
+- you want to pin Antigravity-specific model or permission-skip behavior directly
+
 ## Decision Shortcut
 
 Use this quick rule:
@@ -47,12 +54,13 @@ Use this quick rule:
 1. Start with `codex-delegate-agent`.
 2. Move to `codex-delegate-claude` only if you want Claude-only behavior.
 3. Move to `codex-delegate-opencode` only if you want OpenCode-only behavior.
+4. Move to `codex-delegate-antigravity` only if you want Antigravity-only behavior.
 
-## Why `codex-delegate-agent` Is The V1 Flagship
+## Why `codex-delegate-agent` Is The Default Surface
 
-`v1` treats `codex-delegate-agent` as the main product because it combines:
+The current platform treats `codex-delegate-agent` as the main product because it combines:
 
-- stable explicit backend control through `-Backend claude|opencode`
+- stable explicit backend control through `-Backend claude|opencode|antigravity`
 - transparent auto routing through `-Backend auto`
 - inspectable routing via `manage_auto_routing.ps1`
 - beginner-friendly routing management via `manage_auto_routing_nl.ps1`
@@ -65,13 +73,14 @@ From the repository root:
 
 - root folder: `codex-delegate-claude`
 - generated OpenCode package: `packages/codex-delegate-opencode`
+- generated Antigravity package: `packages/codex-delegate-antigravity`
 - generated unified package: `packages/codex-delegate-agent`
 
 If you clone the repo into your Codex skills directory, the root repo already acts as the Claude package, while the generated packages can be linked in as sibling skills.
 
-## Public V1 Surface
+## Default Public Surface
 
-The public `v1` recommendation is:
+The current recommendation is:
 
 - install `codex-delegate-agent`
 - treat `scripts/run_delegate_agent.ps1` as the primary runtime entrypoint

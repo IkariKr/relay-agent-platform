@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codex-delegate.local/schemas/backend-manifest.schema.json",
+  "title": "Codex Delegate Backend Manifest",
+  "type": "object",
+  "required": [
+    "id",
+    "display_name",
+    "product_name",
+    "command",
+    "package_name",
+    "runner_script",
+    "default_surface",
+    "capabilities",
+    "config_schema_version",
+    "docs_path"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "product_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "package_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runner_script": {
+      "type": "string",
+      "minLength": 1
+    },
+    "default_surface": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "boolean",
+          "string",
+          "number"
+        ]
+      }
+    },
+    "config_schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "docs_path": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": true
+}

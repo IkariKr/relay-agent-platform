@@ -19,8 +19,9 @@ You need:
 - PowerShell
 - Claude Code CLI if you want Claude support
 - OpenCode CLI if you want OpenCode support
+- Antigravity CLI if you want Antigravity support
 
-You do not need both backends installed if you only use one backend explicitly, but `codex-delegate-agent` is most useful when both are available.
+You do not need every backend installed if you only use one backend explicitly, but `codex-delegate-agent` is most useful when multiple registered backends are available.
 
 ## Installation Modes
 
@@ -52,6 +53,7 @@ That creates sibling skill entries for:
 
 - `codex-delegate-agent`
 - `codex-delegate-opencode`
+- `codex-delegate-antigravity`
 
 The repo root itself continues to be the `codex-delegate-claude` skill.
 
@@ -61,6 +63,7 @@ If you only want the installable package output, copy one of these folders into 
 
 - `packages\codex-delegate-agent`
 - `packages\codex-delegate-opencode`
+- `packages\codex-delegate-antigravity`
 
 Use this path when you want the generated package without keeping the whole source repository in place.
 
@@ -132,7 +135,16 @@ For `codex-delegate-agent`, the package includes:
 - `scripts\manage_auto_routing_nl.ps1`
 - `scripts\run_claude_delegate.ps1`
 - `scripts\run_opencode_delegate.ps1`
+- `scripts\run_antigravity_delegate.ps1`
 - `auto-routing.default.json`
+- `platform\`
+- `registry\`
+
+Unified backend-specific tuning is done through workspace-local files under:
+
+```text
+<workdir>\.codex-delegate-agent\backends\
+```
 
 ## Upgrade Procedure
 

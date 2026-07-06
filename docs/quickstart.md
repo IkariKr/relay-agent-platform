@@ -2,7 +2,7 @@
 
 ## Fastest Path
 
-If you only want the recommended `v1` path:
+If you only want the recommended path:
 
 ```powershell
 Set-Location .\packages\codex-delegate-agent
@@ -22,8 +22,8 @@ Set-Location .\packages\codex-delegate-agent
 
 Use this when:
 
-- you want the default `v1` experience
-- you want the package to choose Claude or OpenCode based on routing config
+- you want the default platform experience
+- you want the package to choose Claude, OpenCode, or Antigravity based on routing config
 
 ### 2. Unified Agent With Explicit Claude
 
@@ -35,7 +35,7 @@ Set-Location .\packages\codex-delegate-agent
 Use this when:
 
 - you want Claude regardless of routing rules
-- you need Claude-specific controls such as permission mode or budget
+- you want the unified surface to route to Claude while keeping Claude-specific tuning in `.codex-delegate-agent/backends/claude.json`
 
 ### 3. Unified Agent With Explicit OpenCode
 
@@ -47,9 +47,21 @@ Set-Location .\packages\codex-delegate-agent
 Use this when:
 
 - you want OpenCode regardless of routing rules
-- you want direct local/provider-oriented execution
+- you want direct local/provider-oriented execution through the unified surface while keeping OpenCode tuning in `.codex-delegate-agent/backends/opencode.json`
 
-### 4. Direct OpenCode Package
+### 4. Unified Agent With Explicit Antigravity
+
+```powershell
+Set-Location .\packages\codex-delegate-agent
+.\scripts\run_delegate_agent.ps1 -Prompt "Use agy for this bounded coding task." -Backend antigravity -WhatIf
+```
+
+Use this when:
+
+- you want Antigravity regardless of routing rules
+- you want to validate the `agy` runner and backend-local config path through the unified surface
+
+### 5. Direct OpenCode Package
 
 ```powershell
 Set-Location .\packages\codex-delegate-opencode
@@ -61,7 +73,19 @@ Use this when:
 - you want OpenCode only
 - you do not need the unified routing layer
 
-### 5. Inspect Current Routing Rules
+### 6. Direct Antigravity Package
+
+```powershell
+Set-Location .\packages\codex-delegate-antigravity
+.\scripts\run_antigravity_delegate.ps1 -Prompt "Implement a bounded coding change." -WhatIf
+```
+
+Use this when:
+
+- you want Antigravity only
+- you want direct `agy --print` behavior without the unified routing layer
+
+### 7. Inspect Current Routing Rules
 
 ```powershell
 Set-Location .\packages\codex-delegate-agent
@@ -73,7 +97,7 @@ Use this when:
 - you want to see the active routing config source
 - you want to inspect rule order, enable state, and condition summaries
 
-### 6. Explain Why A Prompt Routes A Certain Way
+### 8. Explain Why A Prompt Routes A Certain Way
 
 ```powershell
 Set-Location .\packages\codex-delegate-agent
@@ -85,7 +109,7 @@ Use this when:
 - you want to know which rule wins
 - you want to inspect the selected backend and routing reason before changing config
 
-### 7. Natural-Language Rule Inspection
+### 9. Natural-Language Rule Inspection
 
 ```powershell
 Set-Location .\packages\codex-delegate-agent
@@ -97,7 +121,7 @@ Use this when:
 - you want a softer entrypoint than the structured action-based script
 - you still want transparent output showing the translated command
 
-### 8. Natural-Language Rule Creation
+### 10. Natural-Language Rule Creation
 
 ```powershell
 Set-Location .\packages\codex-delegate-agent
@@ -119,6 +143,18 @@ On runtime entrypoints, `-WhatIf` prints:
 - backend-specific arguments that would be executed
 
 This is the recommended first-run mode because it lets you validate installation and routing without spending backend tokens or changing anything.
+
+## Backend-Local Config
+
+For unified-surface backend tuning, create backend-local config files such as:
+
+```text
+<workdir>\.codex-delegate-agent\backends\claude.json
+<workdir>\.codex-delegate-agent\backends\opencode.json
+<workdir>\.codex-delegate-agent\backends\antigravity.json
+```
+
+Use this for backend-specific settings like Claude output format, OpenCode model/provider choices, or Antigravity `agy` print settings. The unified runtime no longer exposes backend-specific top-level flags directly.
 
 ## Recommended First-Day Workflow
 

@@ -1,8 +1,8 @@
 {
-  "version": 1,
+  "version": 2,
   "defaults": {
     "preferred_backend": "claude",
-    "fallback_backend": "opencode",
+    "fallback_backends": ["opencode", "antigravity"],
     "on_no_match": "preferred_backend"
   },
   "rules": [
@@ -18,6 +18,18 @@
           "(?i)\\bprovider\\b",
           "(?i)\\bcheap\\b",
           "(?i)\\bfree model\\b"
+        ]
+      }
+    },
+    {
+      "name": "explicit-antigravity-hint",
+      "enabled": true,
+      "backend": "antigravity",
+      "reason": "prompt explicitly asks for Antigravity or agy",
+      "when": {
+        "prompt_any_regex": [
+          "(?i)\\bantigravity\\b",
+          "(?i)\\bagy\\b"
         ]
       }
     },

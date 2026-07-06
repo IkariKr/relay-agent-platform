@@ -1,0 +1,7 @@
+{
+  "model": "",
+  "print_timeout_seconds": 0,
+  "dangerously_skip_permissions": true,
+  "sandbox": false,
+  "add_dirs": []
+}

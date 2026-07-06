@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codex-delegate.local/schemas/routing.schema.json",
+  "title": "Codex Delegate Routing Config",
+  "type": "object",
+  "required": [
+    "version",
+    "defaults",
+    "rules"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "defaults": {
+      "type": "object",
+      "required": [
+        "preferred_backend",
+        "on_no_match"
+      ],
+      "properties": {
+        "preferred_backend": {
+          "type": "string"
+        },
+        "fallback_backend": {
+          "type": "string"
+        },
+        "fallback_backends": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "on_no_match": {
+          "type": "string",
+          "enum": [
+            "preferred_backend",
+            "fallback_backend"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "enabled",
+          "backend",
+          "when"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "backend": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "when": {
+            "type": "object",
+            "properties": {
+              "prompt_any_regex": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "prompt_all_regex": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "workdir_any_regex": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "workdir_all_regex": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

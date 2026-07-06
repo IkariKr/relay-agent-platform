@@ -15,6 +15,7 @@ param(
     [ValidateSet("auto", "small", "coding", "hard", "review", "docs")]
     [string]$ModelIntent = "coding",
 
+    [AllowEmptyCollection()]
     [string[]]$ProviderPreference = @("opencode"),
 
     [switch]$AllowPaidFallback,
@@ -23,6 +24,7 @@ param(
 
     [string]$Agent = "",
 
+    [AllowEmptyCollection()]
     [string[]]$AttachFiles = @(),
 
     [bool]$AutoApprove = $true,
@@ -43,6 +45,8 @@ param(
     [int]$TailLines = 200,
 
     [switch]$FullLog,
+
+    [string]$BackendConfigPath = "",
 
     [switch]$PrintRawJsonTail,
 
@@ -68,6 +72,54 @@ function Get-DelegateCommonModulePath {
 
 $modulePath = Get-DelegateCommonModulePath
 Import-Module $modulePath -Force
+
+function Get-RunnerBackendConfig {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $null
+    }
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        throw "Backend config file not found: $Path"
+    }
+
+    return (Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json)
+}
+
+$runnerBackendConfig = Get-RunnerBackendConfig -Path $BackendConfigPath
+if ($null -ne $runnerBackendConfig) {
+    if (-not $PSBoundParameters.ContainsKey("OutputFormat") -and $runnerBackendConfig.output_format) {
+        $OutputFormat = [string]$runnerBackendConfig.output_format
+    }
+    if (-not $PSBoundParameters.ContainsKey("Model") -and $null -ne $runnerBackendConfig.model) {
+        $Model = [string]$runnerBackendConfig.model
+    }
+    if (-not $PSBoundParameters.ContainsKey("ModelIntent") -and $runnerBackendConfig.model_intent) {
+        $ModelIntent = [string]$runnerBackendConfig.model_intent
+    }
+    if (-not $PSBoundParameters.ContainsKey("ProviderPreference") -and $null -ne $runnerBackendConfig.provider_preference) {
+        $ProviderPreference = @($runnerBackendConfig.provider_preference | ForEach-Object { [string]$_ })
+    }
+    if (-not $PSBoundParameters.ContainsKey("AllowPaidFallback") -and $null -ne $runnerBackendConfig.allow_paid_fallback) {
+        $AllowPaidFallback = if ([bool]$runnerBackendConfig.allow_paid_fallback) { [switch]::Present } else { $false }
+    }
+    if (-not $PSBoundParameters.ContainsKey("RefreshModels") -and $null -ne $runnerBackendConfig.refresh_models) {
+        $RefreshModels = if ([bool]$runnerBackendConfig.refresh_models) { [switch]::Present } else { $false }
+    }
+    if (-not $PSBoundParameters.ContainsKey("Agent") -and $null -ne $runnerBackendConfig.agent) {
+        $Agent = [string]$runnerBackendConfig.agent
+    }
+    if (-not $PSBoundParameters.ContainsKey("AttachFiles") -and $null -ne $runnerBackendConfig.attach_files) {
+        $AttachFiles = @($runnerBackendConfig.attach_files | ForEach-Object { [string]$_ })
+    }
+    if (-not $PSBoundParameters.ContainsKey("AutoApprove") -and $null -ne $runnerBackendConfig.auto_approve) {
+        $AutoApprove = [bool]$runnerBackendConfig.auto_approve
+    }
+    if (-not $PSBoundParameters.ContainsKey("PrintRawJsonTail") -and $null -ne $runnerBackendConfig.print_raw_json_tail) {
+        $PrintRawJsonTail = if ([bool]$runnerBackendConfig.print_raw_json_tail) { [switch]::Present } else { $false }
+    }
+}
 
 function Get-OpencodeIntentPatterns {
     param([Parameter(Mandatory = $true)][string]$Intent)
@@ -132,7 +184,7 @@ function Resolve-OpencodeModelSelection {
     param(
         [Parameter(Mandatory = $true)][string[]]$AvailableModels,
         [Parameter(Mandatory = $true)][string]$Intent,
-        [Parameter(Mandatory = $true)][string[]]$ProviderPreference,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]]$ProviderPreference,
         [Parameter(Mandatory = $true)][bool]$AllowPaidFallback,
         [string]$ExplicitModel = ""
     )

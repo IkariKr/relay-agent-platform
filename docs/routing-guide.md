@@ -2,9 +2,9 @@
 
 ## Purpose
 
-`codex-delegate-agent` routes work to Claude or OpenCode through a transparent rule table.
+`codex-delegate-agent` routes work to Claude, OpenCode, or Antigravity through a transparent rule table.
 
-The `v1` routing contract is intentionally simple:
+The routing contract is intentionally simple:
 
 - explicit backend selection always wins
 - otherwise routing follows config precedence
@@ -21,7 +21,8 @@ Main unified entrypoint:
 
 Most important parameter:
 
-- `-Backend auto|claude|opencode`
+- `-Backend auto|claude|opencode|antigravity`
+- `-AutoStrategy config`
 
 ## Routing Priority
 
@@ -40,6 +41,8 @@ or:
 ```
 
 the selected backend overrides all auto-routing rules.
+
+Backend-specific tuning does not happen through unified top-level flags anymore. Use backend-local config files under `.codex-delegate-agent/backends/`.
 
 ### Auto Routing
 
@@ -70,7 +73,7 @@ Top-level fields:
 
 - `version`
 - `defaults.preferred_backend`
-- `defaults.fallback_backend`
+- `defaults.fallback_backends`
 - `defaults.on_no_match`
 - `rules`
 
@@ -87,7 +90,7 @@ Per-rule fields:
 
 ## Matching Semantics
 
-`v1` uses these rules:
+The router uses these rules:
 
 - disabled rules are skipped completely
 - `prompt_any_regex` means any one pattern may match
@@ -96,7 +99,7 @@ Per-rule fields:
 - `workdir_all_regex` means every listed workdir pattern must match
 - the first enabled rule that matches wins
 
-There is no scoring, weighting, or priority field in `v1`.
+There is no scoring, weighting, or priority field in the current router.
 
 ## Default Fallback Behavior
 
@@ -107,7 +110,7 @@ If no rule matches:
 
 If the chosen backend is unavailable:
 
-- the script falls back to the other available backend
+- the script walks `defaults.fallback_backends` in order
 - the fallback reason is printed in output
 
 ## Example Default Rules
@@ -116,6 +119,7 @@ The default config currently includes patterns such as:
 
 - review, explain, plan, docs, architecture, design -> Claude
 - small, quick, simple, tiny, minor, fast, fix, refactor -> OpenCode
+- explicit `antigravity` or `agy` prompt hints -> Antigravity
 - explicit `claude` prompt hints -> Claude
 - explicit `opencode` or local/provider hints -> OpenCode
 
@@ -153,7 +157,15 @@ That creates:
 <workdir>\.codex-delegate-agent\routing.json
 ```
 
-This is the recommended customization point for `v1`.
+This is the recommended routing customization point.
+
+Per-backend tuning lives beside it:
+
+```text
+<workdir>\.codex-delegate-agent\backends\claude.json
+<workdir>\.codex-delegate-agent\backends\opencode.json
+<workdir>\.codex-delegate-agent\backends\antigravity.json
+```
 
 ## Add A Rule Structurally
 
@@ -192,7 +204,7 @@ If that happens:
 2. run `explain` to confirm which earlier rule is winning
 3. move the rule upward manually in `routing.json` if you want it to have higher priority
 
-This is expected `v1` behavior.
+This is expected behavior.
 
 ## When To Use Structured vs Natural-Language Management
 
@@ -207,7 +219,7 @@ Use `manage_auto_routing_nl.ps1` when:
 - you want a friendlier entrypoint
 - you are comfortable providing labeled fields like `rule:`, `backend:`, and `prompt keywords:`
 
-The natural-language wrapper is still intentionally constrained in `v1`; it is not a free-form conversational editor.
+The natural-language wrapper is intentionally constrained; it is not a free-form conversational editor.
 
 ## Debugging Routing
 

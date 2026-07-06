@@ -1,0 +1,12 @@
+{
+  "output_format": "json",
+  "model": "",
+  "model_intent": "coding",
+  "provider_preference": ["opencode"],
+  "allow_paid_fallback": false,
+  "refresh_models": false,
+  "agent": "",
+  "attach_files": [],
+  "auto_approve": true,
+  "print_raw_json_tail": false
+}

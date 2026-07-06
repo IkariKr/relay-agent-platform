@@ -20,6 +20,24 @@ if (-not (Test-Path -LiteralPath $manageScriptPath)) {
     throw "Routing management script not found: $manageScriptPath"
 }
 
+function Get-BackendRegistryModulePath {
+    $candidates = @(
+        (Join-Path $PSScriptRoot "..\platform\runtime\BackendRegistry.psm1"),
+        (Join-Path $PSScriptRoot "..\..\platform\runtime\BackendRegistry.psm1")
+    )
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return (Resolve-Path -LiteralPath $candidate).Path
+        }
+    }
+
+    throw "Unable to locate BackendRegistry.psm1 from '$PSScriptRoot'."
+}
+
+$backendRegistryModulePath = Get-BackendRegistryModulePath
+Import-Module $backendRegistryModulePath -Force -DisableNameChecking
+
 function Get-QuotedValues {
     param([Parameter(Mandatory = $true)][string]$Text)
 
@@ -131,18 +149,51 @@ function Get-BackendValue {
     param([Parameter(Mandatory = $true)][string]$Text)
 
     $labeled = Get-FieldValue -Text $Text -Labels @("backend", "route to")
-    if ($labeled -match '(?i)\bclaude\b') {
-        return "claude"
-    }
-    if ($labeled -match '(?i)\bopencode\b') {
-        return "opencode"
+    $registry = @(Get-DelegateBackendRegistry)
+    foreach ($manifest in $registry) {
+        $backendId = [string]$manifest.id
+        $commandName = [string]$manifest.command
+        $displayName = [string]$manifest.display_name
+        $productName = [string]$manifest.product_name
+        $patterns = @(
+            "(?i)\b$([regex]::Escape($backendId))\b",
+            "(?i)\b$([regex]::Escape($commandName))\b"
+        )
+        if (-not [string]::IsNullOrWhiteSpace($displayName)) {
+            $patterns += "(?i)$([regex]::Escape($displayName))"
+        }
+        if (-not [string]::IsNullOrWhiteSpace($productName)) {
+            $patterns += "(?i)$([regex]::Escape($productName))"
+        }
+
+        foreach ($pattern in $patterns) {
+            if ($labeled -match $pattern) {
+                return $backendId
+            }
+        }
     }
 
-    if ($Text -match '(?i)\bclaude\b') {
-        return "claude"
-    }
-    if ($Text -match '(?i)\bopencode\b') {
-        return "opencode"
+    foreach ($manifest in $registry) {
+        $backendId = [string]$manifest.id
+        $commandName = [string]$manifest.command
+        $displayName = [string]$manifest.display_name
+        $productName = [string]$manifest.product_name
+        $patterns = @(
+            "(?i)\b$([regex]::Escape($backendId))\b",
+            "(?i)\b$([regex]::Escape($commandName))\b"
+        )
+        if (-not [string]::IsNullOrWhiteSpace($displayName)) {
+            $patterns += "(?i)$([regex]::Escape($displayName))"
+        }
+        if (-not [string]::IsNullOrWhiteSpace($productName)) {
+            $patterns += "(?i)$([regex]::Escape($productName))"
+        }
+
+        foreach ($pattern in $patterns) {
+            if ($Text -match $pattern) {
+                return $backendId
+            }
+        }
     }
 
     return ""

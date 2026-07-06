@@ -2,10 +2,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Prompt,
 
-    [ValidateSet("auto", "claude", "opencode")]
     [string]$Backend = "auto",
 
-    [ValidateSet("config", "prefer-claude", "prefer-opencode")]
+    [ValidateSet("config")]
     [string]$AutoStrategy = "config",
 
     [string]$AutoConfigPath = "",
@@ -32,63 +31,20 @@ param(
 
     [switch]$FullLog,
 
-    [switch]$WhatIf,
-
-    [ValidateSet("acceptEdits", "bypassPermissions", "default", "delegate", "dontAsk", "plan")]
-    [string]$ClaudePermissionMode = "acceptEdits",
-
-    [ValidateSet("json", "stream-json")]
-    [string]$ClaudeOutputFormat = "json",
-
-    [string[]]$ClaudeAllowedTools = @(),
-
-    [string[]]$ClaudeDisallowedTools = @("Bash"),
-
-    [switch]$ClaudeAllowBash,
-
-    [double]$ClaudeMaxBudgetUsd = 0,
-
-    [ValidateSet("default", "json")]
-    [string]$OpencodeOutputFormat = "json",
-
-    [string]$OpencodeModel = "",
-
-    [ValidateSet("auto", "small", "coding", "hard", "review", "docs")]
-    [string]$OpencodeModelIntent = "coding",
-
-    [string[]]$OpencodeProviderPreference = @("opencode"),
-
-    [switch]$OpencodeAllowPaidFallback,
-
-    [switch]$OpencodeRefreshModels,
-
-    [string]$OpencodeAgent = "",
-
-    [string[]]$OpencodeAttachFiles = @(),
-
-    [bool]$OpencodeAutoApprove = $true,
-
-    [switch]$OpencodePrintRawJsonTail
+    [switch]$WhatIf
 )
 
 $ErrorActionPreference = "Stop"
+
 $modulePath = Join-Path $PSScriptRoot "AutoRoutingCommon.psm1"
 Import-Module $modulePath -Force -DisableNameChecking
 
-function Test-AvailableCommand {
-    param([Parameter(Mandatory = $true)][string]$CommandName)
+function Get-PlatformRuntimeModulePath {
+    param([Parameter(Mandatory = $true)][string]$ModuleName)
 
-    return $null -ne (Get-Command $CommandName -ErrorAction SilentlyContinue)
-}
-
-function Get-DelegateBackendScriptPath {
-    param([Parameter(Mandatory = $true)][string]$BackendName)
-
-    $scriptName = "run_{0}_delegate.ps1" -f $BackendName
     $candidates = @(
-        (Join-Path $PSScriptRoot $scriptName),
-        (Join-Path (Join-Path $PSScriptRoot "..\$BackendName") $scriptName),
-        (Join-Path (Join-Path $PSScriptRoot "..\..\scripts") $scriptName)
+        (Join-Path $PSScriptRoot "..\platform\runtime\$ModuleName"),
+        (Join-Path $PSScriptRoot "..\..\platform\runtime\$ModuleName")
     )
 
     foreach ($candidate in $candidates) {
@@ -97,7 +53,77 @@ function Get-DelegateBackendScriptPath {
         }
     }
 
-    throw "Unable to locate backend runner script '$scriptName' from '$PSScriptRoot'."
+    throw "Unable to locate platform runtime module '$ModuleName' from '$PSScriptRoot'."
+}
+
+$backendRegistryModulePath = Get-PlatformRuntimeModulePath -ModuleName "BackendRegistry.psm1"
+$script:BackendRegistryModule = Import-Module $backendRegistryModulePath -Force -DisableNameChecking -PassThru
+
+$backendConfigModulePath = Get-PlatformRuntimeModulePath -ModuleName "BackendConfig.psm1"
+Import-Module $backendConfigModulePath -Force -DisableNameChecking
+
+function Get-RegisteredDelegateBackendIdsLocal {
+    & $script:BackendRegistryModule {
+        Get-RegisteredDelegateBackendIds
+    }
+}
+
+function Get-RegisteredBackendError {
+    $knownBackends = @(Get-RegisteredDelegateBackendIdsLocal)
+    return "Known backends: $($knownBackends -join ', ')."
+}
+
+function Get-DelegateRegistryContextLocal {
+    & $script:BackendRegistryModule {
+        Get-DelegateRegistryContext
+    }
+}
+
+function Get-DelegateBackendManifestLocal {
+    param([Parameter(Mandatory = $true)][string]$BackendId)
+
+    & $script:BackendRegistryModule {
+        param($InnerBackendId)
+        Get-DelegateBackendManifest -BackendId $InnerBackendId
+    } $BackendId
+}
+
+function Test-DelegateBackendRegisteredLocal {
+    param([Parameter(Mandatory = $true)][string]$BackendId)
+
+    & $script:BackendRegistryModule {
+        param($InnerBackendId)
+        Test-DelegateBackendRegistered -BackendId $InnerBackendId
+    } $BackendId
+}
+
+function Get-DelegateBackendScriptPath {
+    param([Parameter(Mandatory = $true)][string]$BackendId)
+
+    $manifest = Get-DelegateBackendManifestLocal -BackendId $BackendId
+    $context = Get-DelegateRegistryContextLocal
+    $scriptName = "run_{0}_delegate.ps1" -f $BackendId
+    $candidates = New-Object System.Collections.Generic.List[string]
+
+    if ($context.Mode -eq "package") {
+        $candidates.Add((Join-Path $context.RootPath "scripts\$scriptName"))
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace([string]$manifest.runner_script)) {
+        $candidates.Add((Join-Path $context.RootPath ([string]$manifest.runner_script)))
+    }
+
+    $candidates.Add((Join-Path $PSScriptRoot $scriptName))
+    $candidates.Add((Join-Path (Join-Path $PSScriptRoot "..\$BackendId") $scriptName))
+    $candidates.Add((Join-Path (Join-Path $PSScriptRoot "..\..\scripts") $scriptName))
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return (Resolve-Path -LiteralPath $candidate).Path
+        }
+    }
+
+    throw "Unable to locate backend runner script '$scriptName' for backend '$BackendId'."
 }
 
 function Resolve-DelegateBackend {
@@ -110,15 +136,16 @@ function Resolve-DelegateBackend {
         [Parameter(Mandatory = $true)][string]$PackageRoot
     )
 
-    $hasClaude = Test-AvailableCommand -CommandName "claude"
-    $hasOpenCode = Test-AvailableCommand -CommandName "opencode"
+    $availability = Get-RoutingBackendAvailabilityMap
 
     if ($RequestedBackend -ne "auto") {
-        if ($RequestedBackend -eq "claude" -and -not $hasClaude) {
-            throw "Claude was explicitly requested, but 'claude' was not found on PATH."
+        if (-not (Test-DelegateBackendRegisteredLocal -BackendId $RequestedBackend)) {
+            throw "Backend '$RequestedBackend' is not registered. $(Get-RegisteredBackendError)"
         }
-        if ($RequestedBackend -eq "opencode" -and -not $hasOpenCode) {
-            throw "OpenCode was explicitly requested, but 'opencode' was not found on PATH."
+
+        $manifest = Get-DelegateBackendManifestLocal -BackendId $RequestedBackend
+        if (-not ($availability.Contains($RequestedBackend) -and $availability[$RequestedBackend])) {
+            throw "$($manifest.display_name) was explicitly requested, but '$($manifest.command)' was not found on PATH."
         }
 
         return [pscustomobject]@{
@@ -129,56 +156,70 @@ function Resolve-DelegateBackend {
         }
     }
 
-    if ($AutoStrategy -eq "config") {
-        $routingConfig = Load-AutoRoutingConfig -AutoConfigPath $AutoConfigPath -PackageRoot $PackageRoot -Workdir $Workdir
-        return (Resolve-AutoConfiguredBackend `
-            -RoutingConfig $routingConfig `
-            -Prompt $Prompt `
-            -Workdir $Workdir `
-            -HasClaude $hasClaude `
-            -HasOpenCode $hasOpenCode)
+    $routingConfig = Load-AutoRoutingConfig -AutoConfigPath $AutoConfigPath -PackageRoot $PackageRoot -Workdir $Workdir
+    return (Resolve-AutoConfiguredBackend `
+        -RoutingConfig $routingConfig `
+        -Prompt $Prompt `
+        -Workdir $Workdir `
+        -BackendAvailability $availability)
+}
+
+function Get-EffectiveBackendConfig {
+    param(
+        [Parameter(Mandatory = $true)][string]$BackendId,
+        [Parameter(Mandatory = $true)][string]$Workdir
+    )
+
+    return (Load-DelegateBackendConfig -BackendId $BackendId -Workdir $Workdir)
+}
+
+function Write-TemporaryBackendConfigFile {
+    param(
+        [Parameter(Mandatory = $true)][string]$BackendId,
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$BackendConfig
+    )
+
+    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) "codex-delegate-agent"
+    if (-not (Test-Path -LiteralPath $tempRoot)) {
+        New-Item -ItemType Directory -Path $tempRoot | Out-Null
     }
 
-    switch ($AutoStrategy) {
-        "prefer-opencode" {
-            if ($hasOpenCode) {
-                return [pscustomobject]@{
-                    Backend = "opencode"
-                    Reason = "auto strategy prefer-opencode"
-                    Rule = ""
-                    ConfigPath = ""
-                }
-            }
-            if ($hasClaude) {
-                return [pscustomobject]@{
-                    Backend = "claude"
-                    Reason = "auto strategy prefer-opencode fell back to Claude"
-                    Rule = ""
-                    ConfigPath = ""
-                }
-            }
-        }
-        default {
-            if ($hasClaude) {
-                return [pscustomobject]@{
-                    Backend = "claude"
-                    Reason = "auto strategy prefer-claude"
-                    Rule = ""
-                    ConfigPath = ""
-                }
-            }
-            if ($hasOpenCode) {
-                return [pscustomobject]@{
-                    Backend = "opencode"
-                    Reason = "auto strategy prefer-claude fell back to OpenCode"
-                    Rule = ""
-                    ConfigPath = ""
-                }
-            }
-        }
-    }
+    $configPath = Join-Path $tempRoot ("{0}-{1}.json" -f $BackendId, [System.Guid]::NewGuid().ToString("N"))
+    $json = $BackendConfig | ConvertTo-Json -Depth 20
+    Set-Content -LiteralPath $configPath -Value $json
+    return $configPath
+}
 
-    throw "Neither Claude nor OpenCode was found on PATH."
+function Invoke-RegisteredBackend {
+    param(
+        [Parameter(Mandatory = $true)][string]$ScriptPath,
+        [Parameter(Mandatory = $true)][string]$BackendId,
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$BackendConfig,
+        [Parameter(Mandatory = $true)][string]$ResolvedWorkdir
+    )
+
+    $tempConfigPath = Write-TemporaryBackendConfigFile -BackendId $BackendId -BackendConfig $BackendConfig
+    try {
+        $backendParams = @{
+            Prompt = $Prompt
+            Workdir = $ResolvedWorkdir
+            MaxTurns = $MaxTurns
+            TimeoutSeconds = $TimeoutSeconds
+            IdleTimeoutSeconds = $IdleTimeoutSeconds
+            PollSeconds = $PollSeconds
+            StatusSeconds = $StatusSeconds
+            TailLines = $TailLines
+            FullLog = $FullLog
+            BackendConfigPath = $tempConfigPath
+            WhatIf = $WhatIf
+        }
+
+        & $ScriptPath @backendParams
+        return $LASTEXITCODE
+    }
+    finally {
+        Remove-Item -LiteralPath $tempConfigPath -Force -ErrorAction SilentlyContinue
+    }
 }
 
 $packageRoot = Get-DelegateAgentPackageRoot
@@ -190,8 +231,8 @@ $resolution = Resolve-DelegateBackend `
     -Prompt $Prompt `
     -Workdir $resolvedWorkdir `
     -PackageRoot $packageRoot
-$claudeScript = Get-DelegateBackendScriptPath -BackendName "claude"
-$opencodeScript = Get-DelegateBackendScriptPath -BackendName "opencode"
+$backendScript = Get-DelegateBackendScriptPath -BackendId $resolution.Backend
+$backendConfig = Get-EffectiveBackendConfig -BackendId $resolution.Backend -Workdir $resolvedWorkdir
 
 Write-Host "Resolved backend: $($resolution.Backend)"
 Write-Host "AutoStrategy: $AutoStrategy"
@@ -202,62 +243,16 @@ if (-not [string]::IsNullOrWhiteSpace($resolution.Rule)) {
 if (-not [string]::IsNullOrWhiteSpace($resolution.ConfigPath)) {
     Write-Host "RoutingConfig: $($resolution.ConfigPath)"
 }
-
-if ($resolution.Backend -eq "claude") {
-    $claudeParams = @{
-        Prompt = $Prompt
-        Workdir = $resolvedWorkdir
-        MaxTurns = $MaxTurns
-        PermissionMode = $ClaudePermissionMode
-        OutputFormat = $ClaudeOutputFormat
-        AllowedTools = $ClaudeAllowedTools
-        DisallowedTools = $ClaudeDisallowedTools
-        MaxBudgetUsd = $ClaudeMaxBudgetUsd
-        TimeoutSeconds = $TimeoutSeconds
-        IdleTimeoutSeconds = $IdleTimeoutSeconds
-        PollSeconds = $PollSeconds
-        StatusSeconds = $StatusSeconds
-        TailLines = $TailLines
-        FullLog = $FullLog
-        WhatIf = $WhatIf
-    }
-
-    if ($ClaudeAllowBash) {
-        $claudeParams.AllowBash = $true
-    }
-
-    & $claudeScript @claudeParams
-    exit $LASTEXITCODE
+if (-not [string]::IsNullOrWhiteSpace($backendConfig.DefaultPath)) {
+    Write-Host "BackendConfigDefault: $($backendConfig.DefaultPath)"
+}
+if (-not [string]::IsNullOrWhiteSpace($backendConfig.OverridePath)) {
+    Write-Host "BackendConfigOverride: $($backendConfig.OverridePath)"
 }
 
-$opencodeParams = @{
-    Prompt = $Prompt
-    Workdir = $resolvedWorkdir
-    MaxTurns = $MaxTurns
-    OutputFormat = $OpencodeOutputFormat
-    Model = $OpencodeModel
-    ModelIntent = $OpencodeModelIntent
-    ProviderPreference = $OpencodeProviderPreference
-    Agent = $OpencodeAgent
-    AttachFiles = $OpencodeAttachFiles
-    AutoApprove = $OpencodeAutoApprove
-    TimeoutSeconds = $TimeoutSeconds
-    IdleTimeoutSeconds = $IdleTimeoutSeconds
-    PollSeconds = $PollSeconds
-    StatusSeconds = $StatusSeconds
-    TailLines = $TailLines
-    FullLog = $FullLog
-    WhatIf = $WhatIf
-    PrintRawJsonTail = $OpencodePrintRawJsonTail
-}
-
-if ($OpencodeAllowPaidFallback) {
-    $opencodeParams.AllowPaidFallback = $true
-}
-
-if ($OpencodeRefreshModels) {
-    $opencodeParams.RefreshModels = $true
-}
-
-& $opencodeScript @opencodeParams
-exit $LASTEXITCODE
+$exitCode = Invoke-RegisteredBackend `
+    -ScriptPath $backendScript `
+    -BackendId $resolution.Backend `
+    -BackendConfig $backendConfig.Config `
+    -ResolvedWorkdir $resolvedWorkdir
+exit $exitCode

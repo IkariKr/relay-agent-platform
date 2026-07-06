@@ -1,0 +1,18 @@
+{
+  "id": "antigravity",
+  "package_name": "codex-delegate-antigravity",
+  "display_name": "Codex Delegate Antigravity",
+  "description": "Delegate coding implementation to Antigravity CLI while Codex keeps responsibility for task decomposition, review, verification, retry prompts, and git commits.",
+  "short_description": "Delegate coding work to Antigravity, then review",
+  "default_prompt": "Use $codex-delegate-antigravity to delegate this coding task to Antigravity CLI, review the diff, and commit only verified changes.",
+  "mode": "single-backend",
+  "default_backend": "antigravity",
+  "allowed_backends": [
+    "antigravity"
+  ],
+  "public_scripts": [],
+  "public_assets": [],
+  "package_root": "packages/codex-delegate-antigravity",
+  "doc_entry": "docs/quickstart.md",
+  "notes_backend": "antigravity"
+}

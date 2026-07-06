@@ -1,6 +1,24 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Get-BackendRegistryModulePath {
+    $candidates = @(
+        (Join-Path $PSScriptRoot "..\platform\runtime\BackendRegistry.psm1"),
+        (Join-Path $PSScriptRoot "..\..\platform\runtime\BackendRegistry.psm1")
+    )
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return (Resolve-Path -LiteralPath $candidate).Path
+        }
+    }
+
+    throw "Unable to locate BackendRegistry.psm1 from '$PSScriptRoot'."
+}
+
+$backendRegistryModulePath = Get-BackendRegistryModulePath
+Import-Module $backendRegistryModulePath -Force -DisableNameChecking
+
 function ConvertTo-OrderedRoutingValue {
     param([Parameter(ValueFromPipeline = $true)]$InputObject)
 
@@ -50,6 +68,29 @@ function Get-DelegateAgentPackageRoot {
     throw "Unable to locate delegate agent package root from '$PSScriptRoot'."
 }
 
+function Get-RegisteredRoutingBackendIds {
+    return @(Get-RegisteredDelegateBackendIds)
+}
+
+function Assert-RegisteredRoutingBackend {
+    param([string]$BackendId, [string]$Context = "routing config")
+
+    if ([string]::IsNullOrWhiteSpace($BackendId)) {
+        return
+    }
+
+    if (-not (Test-DelegateBackendRegistered -BackendId $BackendId)) {
+        $known = @(Get-RegisteredRoutingBackendIds)
+        throw "Backend '$BackendId' is not registered for $Context. Known backends: $($known -join ', ')."
+    }
+}
+
+function Get-RoutingBackendAvailabilityMap {
+    param([string[]]$BackendIds = @())
+
+    return (Get-DelegateBackendAvailabilityMap -BackendIds $BackendIds)
+}
+
 function Get-DefaultUserRoutingConfigPath {
     param([Parameter(Mandatory = $true)][string]$Workdir)
 
@@ -69,13 +110,47 @@ function Get-DefaultAutoConfigSearchPaths {
 
 function Get-DefaultTemplateRoutingConfig {
     return [ordered]@{
-        version = 1
+        version = 2
         defaults = [ordered]@{
             preferred_backend = "claude"
-            fallback_backend = "opencode"
+            fallback_backends = @("opencode")
             on_no_match = "preferred_backend"
         }
         rules = @()
+    }
+}
+
+function Normalize-RoutingDefaults {
+    param($Defaults)
+
+    $data = if ($null -eq $Defaults) { [ordered]@{} } else { ConvertTo-OrderedRoutingValue $Defaults }
+    $preferredBackend = if ($data.Contains("preferred_backend")) { [string]$data.preferred_backend } else { "claude" }
+    Assert-RegisteredRoutingBackend -BackendId $preferredBackend -Context "routing defaults preferred_backend"
+
+    $fallbackBackends = @()
+    if ($data.Contains("fallback_backends")) {
+        $fallbackBackends = @($data.fallback_backends | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { [string]$_ })
+    }
+    elseif ($data.Contains("fallback_backend") -and -not [string]::IsNullOrWhiteSpace([string]$data.fallback_backend)) {
+        $fallbackBackends = @([string]$data.fallback_backend)
+    }
+    else {
+        $fallbackBackends = @("opencode")
+    }
+
+    $distinctFallbackBackends = New-Object System.Collections.Generic.List[string]
+    foreach ($backendId in $fallbackBackends) {
+        Assert-RegisteredRoutingBackend -BackendId $backendId -Context "routing defaults fallback_backends"
+        if (-not $distinctFallbackBackends.Contains($backendId)) {
+            $distinctFallbackBackends.Add($backendId)
+        }
+    }
+
+    return [ordered]@{
+        preferred_backend = $preferredBackend
+        fallback_backends = @($distinctFallbackBackends)
+        fallback_backend = if ($distinctFallbackBackends.Count -gt 0) { $distinctFallbackBackends[0] } else { "" }
+        on_no_match = if ($data.Contains("on_no_match")) { [string]$data.on_no_match } else { "preferred_backend" }
     }
 }
 
@@ -88,11 +163,13 @@ function Normalize-RoutingRule {
     $promptAll = if ($when.Contains("prompt_all_regex")) { @($when["prompt_all_regex"]) } else { @() }
     $workdirAny = if ($when.Contains("workdir_any_regex")) { @($when["workdir_any_regex"]) } else { @() }
     $workdirAll = if ($when.Contains("workdir_all_regex")) { @($when["workdir_all_regex"]) } else { @() }
+    $backendId = if ($data.Contains("backend")) { [string]$data.backend } else { "claude" }
+    Assert-RegisteredRoutingBackend -BackendId $backendId -Context "routing rule"
 
     return [ordered]@{
         name = if ($data.Contains("name")) { [string]$data.name } else { "" }
         enabled = if ($data.Contains("enabled")) { [bool]$data.enabled } else { $true }
-        backend = if ($data.Contains("backend")) { [string]$data.backend } else { "claude" }
+        backend = $backendId
         reason = if ($data.Contains("reason")) { [string]$data.reason } else { "" }
         when = [ordered]@{
             prompt_any_regex = @($promptAny | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
@@ -107,21 +184,51 @@ function Normalize-AutoRoutingConfig {
     param($Config)
 
     $data = if ($null -eq $Config) { Get-DefaultTemplateRoutingConfig } else { ConvertTo-OrderedRoutingValue $Config }
-    $defaults = if ($data.Contains("defaults")) { ConvertTo-OrderedRoutingValue $data.defaults } else { [ordered]@{} }
     $rules = @()
+    $defaultsInput = $null
+    if ($data.Contains("defaults")) {
+        $defaultsInput = $data.defaults
+    }
     $inputRules = if ($data.Contains("rules")) { @($data["rules"]) } else { @() }
     foreach ($rule in $inputRules) {
         $rules += ,(Normalize-RoutingRule -Rule $rule)
     }
 
     return [ordered]@{
-        version = if ($data.Contains("version")) { [int]$data.version } else { 1 }
-        defaults = [ordered]@{
-            preferred_backend = if ($defaults.Contains("preferred_backend")) { [string]$defaults.preferred_backend } else { "claude" }
-            fallback_backend = if ($defaults.Contains("fallback_backend")) { [string]$defaults.fallback_backend } else { "opencode" }
-            on_no_match = if ($defaults.Contains("on_no_match")) { [string]$defaults.on_no_match } else { "preferred_backend" }
-        }
+        version = if ($data.Contains("version")) { [int]$data.version } else { 2 }
+        defaults = (Normalize-RoutingDefaults -Defaults $defaultsInput)
         rules = $rules
+    }
+}
+
+function ConvertTo-PersistedRoutingConfig {
+    param([Parameter(Mandatory = $true)]$Config)
+
+    $normalized = Normalize-AutoRoutingConfig $Config
+    return [ordered]@{
+        version = 2
+        defaults = [ordered]@{
+            preferred_backend = $normalized.defaults.preferred_backend
+            fallback_backends = @($normalized.defaults.fallback_backends)
+            on_no_match = $normalized.defaults.on_no_match
+        }
+        rules = @(
+            foreach ($rule in @($normalized.rules)) {
+                $normalizedRule = Normalize-RoutingRule -Rule $rule
+                [ordered]@{
+                    name = $normalizedRule.name
+                    enabled = $normalizedRule.enabled
+                    backend = $normalizedRule.backend
+                    reason = $normalizedRule.reason
+                    when = [ordered]@{
+                        prompt_any_regex = @($normalizedRule.when.prompt_any_regex)
+                        prompt_all_regex = @($normalizedRule.when.prompt_all_regex)
+                        workdir_any_regex = @($normalizedRule.when.workdir_any_regex)
+                        workdir_all_regex = @($normalizedRule.when.workdir_all_regex)
+                    }
+                }
+            }
+        )
     }
 }
 
@@ -168,8 +275,8 @@ function Save-AutoRoutingConfig {
         New-Item -ItemType Directory -Path $parent -Force | Out-Null
     }
 
-    $normalized = Normalize-AutoRoutingConfig $Config
-    $json = $normalized | ConvertTo-Json -Depth 20
+    $persisted = ConvertTo-PersistedRoutingConfig -Config $Config
+    $json = $persisted | ConvertTo-Json -Depth 20
     Set-Content -LiteralPath $Path -Value $json
 }
 
@@ -315,8 +422,9 @@ function Resolve-AutoConfiguredBackend {
         [Parameter(Mandatory = $true)]$RoutingConfig,
         [Parameter(Mandatory = $true)][string]$Prompt,
         [Parameter(Mandatory = $true)][string]$Workdir,
-        [Parameter(Mandatory = $true)][bool]$HasClaude,
-        [Parameter(Mandatory = $true)][bool]$HasOpenCode
+        [hashtable]$BackendAvailability = $null,
+        [bool]$HasClaude = $false,
+        [bool]$HasOpenCode = $false
     )
 
     $config = Normalize-AutoRoutingConfig $RoutingConfig.Config
@@ -328,8 +436,26 @@ function Resolve-AutoConfiguredBackend {
         }
     }
 
+    $availability = [ordered]@{}
+    if ($null -ne $BackendAvailability -and $BackendAvailability.Count -gt 0) {
+        foreach ($backendId in $BackendAvailability.Keys) {
+            $availability[[string]$backendId] = [bool]$BackendAvailability[$backendId]
+        }
+    }
+    else {
+        foreach ($pair in (Get-RoutingBackendAvailabilityMap).GetEnumerator()) {
+            $availability[[string]$pair.Key] = [bool]$pair.Value
+        }
+        if (-not $availability.Contains("claude")) {
+            $availability["claude"] = $HasClaude
+        }
+        if (-not $availability.Contains("opencode")) {
+            $availability["opencode"] = $HasOpenCode
+        }
+    }
+
     $preferredBackend = $config.defaults.preferred_backend
-    $fallbackBackend = $config.defaults.fallback_backend
+    $fallbackBackends = @($config.defaults.fallback_backends)
     $noMatchAction = $config.defaults.on_no_match
 
     $selectedBackend = $null
@@ -341,8 +467,14 @@ function Resolve-AutoConfiguredBackend {
     else {
         switch ($noMatchAction) {
             "fallback_backend" {
-                $selectedBackend = $fallbackBackend
-                $reason = "no rule matched; using configured fallback backend"
+                if ($fallbackBackends.Count -gt 0) {
+                    $selectedBackend = $fallbackBackends[0]
+                    $reason = "no rule matched; using configured fallback backend"
+                }
+                else {
+                    $selectedBackend = $preferredBackend
+                    $reason = "no rule matched; fallback_backends was empty, using configured preferred backend"
+                }
             }
             default {
                 $selectedBackend = $preferredBackend
@@ -351,12 +483,7 @@ function Resolve-AutoConfiguredBackend {
         }
     }
 
-    $available = @{
-        claude = $HasClaude
-        opencode = $HasOpenCode
-    }
-
-    if ($available[$selectedBackend]) {
+    if ($availability.Contains($selectedBackend) -and $availability[$selectedBackend]) {
         return [pscustomobject]@{
             Backend = $selectedBackend
             Reason = $reason
@@ -365,27 +492,47 @@ function Resolve-AutoConfiguredBackend {
         }
     }
 
-    $fallbackCandidate = if ($selectedBackend -eq "claude") { "opencode" } else { "claude" }
-    if ($available[$fallbackCandidate]) {
-        return [pscustomobject]@{
-            Backend = $fallbackCandidate
-            Reason = "$reason; selected backend unavailable, fell back to $fallbackCandidate"
-            Rule = if ($ruleHit) { $ruleHit.name } else { "" }
-            ConfigPath = $RoutingConfig.Path
+    $orderedFallbackCandidates = New-Object System.Collections.Generic.List[string]
+    foreach ($backendId in $fallbackBackends) {
+        if ($backendId -ne $selectedBackend -and -not $orderedFallbackCandidates.Contains($backendId)) {
+            $orderedFallbackCandidates.Add($backendId)
         }
     }
 
-    throw "Neither Claude nor OpenCode was found on PATH."
+    foreach ($pair in $availability.GetEnumerator()) {
+        if ($pair.Key -ne $selectedBackend -and -not $orderedFallbackCandidates.Contains([string]$pair.Key)) {
+            $orderedFallbackCandidates.Add([string]$pair.Key)
+        }
+    }
+
+    foreach ($fallbackCandidate in $orderedFallbackCandidates) {
+        if ($availability.Contains($fallbackCandidate) -and $availability[$fallbackCandidate]) {
+            return [pscustomobject]@{
+                Backend = $fallbackCandidate
+                Reason = "$reason; selected backend unavailable, fell back to $fallbackCandidate"
+                Rule = if ($ruleHit) { $ruleHit.name } else { "" }
+                ConfigPath = $RoutingConfig.Path
+            }
+        }
+    }
+
+    $checkedBackends = @($availability.Keys)
+    throw "No registered backend commands were found on PATH. Checked backends: $($checkedBackends -join ', ')."
 }
 
 Export-ModuleMember -Function `
     ConvertTo-OrderedRoutingValue, `
     Get-DelegateAgentPackageRoot, `
+    Get-RegisteredRoutingBackendIds, `
+    Assert-RegisteredRoutingBackend, `
+    Get-RoutingBackendAvailabilityMap, `
     Get-DefaultUserRoutingConfigPath, `
     Get-DefaultAutoConfigSearchPaths, `
     Get-DefaultTemplateRoutingConfig, `
+    Normalize-RoutingDefaults, `
     Normalize-RoutingRule, `
     Normalize-AutoRoutingConfig, `
+    ConvertTo-PersistedRoutingConfig, `
     Load-AutoRoutingConfig, `
     Save-AutoRoutingConfig, `
     New-DefaultUserRoutingConfig, `

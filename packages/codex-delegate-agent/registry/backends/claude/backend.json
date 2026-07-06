@@ -1,0 +1,19 @@
+{
+  "id": "claude",
+  "display_name": "Claude",
+  "product_name": "Claude Code",
+  "command": "claude",
+  "package_name": "codex-delegate-claude",
+  "runner_script": "scripts/run_claude_delegate.ps1",
+  "default_surface": "claude",
+  "capabilities": {
+    "json_output": true,
+    "whatif_supported": true,
+    "timeout_wrapped": true,
+    "interactive_approval_control": true,
+    "file_attachment_support": false,
+    "model_selection_support": false
+  },
+  "config_schema_version": 1,
+  "docs_path": "backends/claude/skill-backend.md"
+}

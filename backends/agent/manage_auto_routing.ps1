@@ -11,7 +11,6 @@ param(
 
     [string]$RuleName = "",
 
-    [ValidateSet("claude", "opencode")]
     [string]$Backend = "",
 
     [string]$Reason = "",
@@ -77,7 +76,9 @@ function Write-RoutingConfigList {
     param([Parameter(Mandatory = $true)]$LoadedConfig)
 
     Write-Host "RoutingConfig: $($LoadedConfig.Path)"
-    Write-Host "Defaults: preferred=$($LoadedConfig.Config.defaults.preferred_backend) fallback=$($LoadedConfig.Config.defaults.fallback_backend) on_no_match=$($LoadedConfig.Config.defaults.on_no_match)"
+    $fallbackBackends = @($LoadedConfig.Config.defaults.fallback_backends)
+    $fallbackSummary = if ($fallbackBackends.Count -gt 0) { $fallbackBackends -join "," } else { "(none)" }
+    Write-Host "Defaults: preferred=$($LoadedConfig.Config.defaults.preferred_backend) fallbacks=$fallbackSummary on_no_match=$($LoadedConfig.Config.defaults.on_no_match)"
     Write-Host "Rules:"
 
     $rules = @($LoadedConfig.Config.rules)
@@ -107,8 +108,7 @@ function Write-RoutingExplanation {
         -RoutingConfig $LoadedConfig `
         -Prompt $Prompt `
         -Workdir $Workdir `
-        -HasClaude (Test-AvailableCommand -CommandName "claude") `
-        -HasOpenCode (Test-AvailableCommand -CommandName "opencode")
+        -BackendAvailability (Get-RoutingBackendAvailabilityMap)
 
     Write-Host "RoutingConfig: $($decision.ConfigPath)"
     Write-Host "ResolvedBackend: $($decision.Backend)"
@@ -146,6 +146,7 @@ switch ($Action) {
         if ([string]::IsNullOrWhiteSpace($Backend)) {
             throw "Backend is required for action 'add'."
         }
+        Assert-RegisteredRoutingBackend -BackendId $Backend -Context "routing add action"
         $editable = Get-OrCreateEditableRoutingConfig -ConfigPath $ConfigPath -PackageRoot $packageRoot -Workdir $resolvedWorkdir
         if ((Find-RoutingRuleIndex -Config $editable.Config -RuleName $RuleName) -ge 0) {
             throw "Rule already exists: $RuleName"
@@ -175,6 +176,7 @@ switch ($Action) {
 
         $rule = Normalize-RoutingRule $editable.Config.rules[$index]
         if ($PSBoundParameters.ContainsKey("Backend") -and -not [string]::IsNullOrWhiteSpace($Backend)) {
+            Assert-RegisteredRoutingBackend -BackendId $Backend -Context "routing update action"
             $rule.backend = $Backend
         }
         if ($PSBoundParameters.ContainsKey("Reason")) {

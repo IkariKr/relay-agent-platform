@@ -13,8 +13,10 @@ param(
     [ValidateSet("json", "stream-json")]
     [string]$OutputFormat = "json",
 
+    [AllowEmptyCollection()]
     [string[]]$AllowedTools = @(),
 
+    [AllowEmptyCollection()]
     [string[]]$DisallowedTools = @("Bash"),
 
     [switch]$AllowBash,
@@ -38,12 +40,50 @@ param(
 
     [switch]$FullLog,
 
+    [string]$BackendConfigPath = "",
+
     [switch]$WhatIf
 )
 
 $ErrorActionPreference = "Stop"
 $modulePath = Join-Path $PSScriptRoot "..\shared\scripts\DelegateCommon.psm1"
 Import-Module $modulePath -Force
+
+function Get-RunnerBackendConfig {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $null
+    }
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        throw "Backend config file not found: $Path"
+    }
+
+    return (Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json)
+}
+
+$runnerBackendConfig = Get-RunnerBackendConfig -Path $BackendConfigPath
+if ($null -ne $runnerBackendConfig) {
+    if (-not $PSBoundParameters.ContainsKey("PermissionMode") -and $runnerBackendConfig.permission_mode) {
+        $PermissionMode = [string]$runnerBackendConfig.permission_mode
+    }
+    if (-not $PSBoundParameters.ContainsKey("OutputFormat") -and $runnerBackendConfig.output_format) {
+        $OutputFormat = [string]$runnerBackendConfig.output_format
+    }
+    if (-not $PSBoundParameters.ContainsKey("AllowedTools") -and $null -ne $runnerBackendConfig.allowed_tools) {
+        $AllowedTools = @($runnerBackendConfig.allowed_tools | ForEach-Object { [string]$_ })
+    }
+    if (-not $PSBoundParameters.ContainsKey("DisallowedTools") -and $null -ne $runnerBackendConfig.disallowed_tools) {
+        $DisallowedTools = @($runnerBackendConfig.disallowed_tools | ForEach-Object { [string]$_ })
+    }
+    if (-not $PSBoundParameters.ContainsKey("AllowBash") -and $null -ne $runnerBackendConfig.allow_bash) {
+        $AllowBash = if ([bool]$runnerBackendConfig.allow_bash) { [switch]::Present } else { $false }
+    }
+    if (-not $PSBoundParameters.ContainsKey("MaxBudgetUsd") -and $null -ne $runnerBackendConfig.max_budget_usd) {
+        $MaxBudgetUsd = [double]$runnerBackendConfig.max_budget_usd
+    }
+}
 
 $resolvedWorkdir = (Resolve-Path -LiteralPath $Workdir).Path
 $claudePath = Resolve-DelegateCommandPath -CommandName "claude"

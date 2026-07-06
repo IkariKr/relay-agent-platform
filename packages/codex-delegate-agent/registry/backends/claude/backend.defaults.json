@@ -1,0 +1,8 @@
+{
+  "permission_mode": "acceptEdits",
+  "output_format": "json",
+  "allowed_tools": [],
+  "disallowed_tools": ["Bash"],
+  "allow_bash": false,
+  "max_budget_usd": 0
+}
