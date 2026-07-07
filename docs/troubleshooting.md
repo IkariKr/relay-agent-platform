@@ -89,7 +89,7 @@ Fix flow:
 
 1. run `list`
 2. run `explain`
-3. move the rule upward manually in `.codex-delegate-agent\routing.json` if needed
+3. move the rule upward manually in `.relay-agent\routing.json` if needed
 
 ## The Natural-Language Wrapper Did Not Parse My Request
 
@@ -218,9 +218,9 @@ Then rerun the command in that shell session.
 
 Use:
 
-- `codex-delegate-agent` by default
-- `codex-delegate-claude` only if you want Claude-only behavior
-- `codex-delegate-opencode` only if you want OpenCode-only behavior
+- `relay-agent` by default
+- `relay-claude` only if you want Claude-only behavior
+- `relay-opencode` only if you want OpenCode-only behavior
 
 See `docs/package-selection.md` for the detailed comparison.
 

@@ -1,7 +1,7 @@
 {
-  "name": "codex-delegate-claude",
+  "name": "relay-claude",
   "description": "Delegate coding implementation to Claude Code while Codex keeps responsibility for task decomposition, review, verification, retry prompts, and git commits.",
-  "displayName": "Codex Delegate Claude",
+  "displayName": "Relay Claude",
   "shortDescription": "Delegate coding work to Claude, then review",
-  "defaultPrompt": "Use $codex-delegate-claude to delegate this coding task to Claude Code, review the diff, and commit only verified changes."
+  "defaultPrompt": "Use $relay-claude to delegate this coding task to Claude Code, review the diff, and commit only verified changes."
 }

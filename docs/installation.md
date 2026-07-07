@@ -1,4 +1,4 @@
-# Installation
+# Install Relay
 
 ## Supported Environment
 
@@ -21,7 +21,7 @@ You need:
 - OpenCode CLI if you want OpenCode support
 - Antigravity CLI if you want Antigravity support
 
-You do not need every backend installed if you only use one backend explicitly, but `codex-delegate-agent` is most useful when multiple registered backends are available.
+You do not need every backend installed if you only use one backend explicitly, but `relay-agent` is most useful when multiple registered backends are available.
 
 ## Installation Modes
 
@@ -34,7 +34,7 @@ This is the recommended maintainer and power-user path.
 1. Clone the repo under your Codex skills directory so the repo root is:
 
 ```powershell
-<skills-dir>\codex-delegate-claude
+<skills-dir>\relay-agent-platform
 ```
 
 2. From the repo root, build generated packages:
@@ -51,19 +51,21 @@ This is the recommended maintainer and power-user path.
 
 That creates sibling skill entries for:
 
-- `codex-delegate-agent`
-- `codex-delegate-opencode`
-- `codex-delegate-antigravity`
+- `relay-agent`
+- `relay-claude`
+- `relay-opencode`
+- `relay-antigravity`
 
-The repo root itself continues to be the `codex-delegate-claude` skill.
+The repo root is now the source project. Install the generated `relay-*` packages as skills.
 
 ### Option 2: Copy A Generated Package Directly
 
 If you only want the installable package output, copy one of these folders into your Codex skills directory:
 
-- `packages\codex-delegate-agent`
-- `packages\codex-delegate-opencode`
-- `packages\codex-delegate-antigravity`
+- `packages\relay-agent`
+- `packages\relay-claude`
+- `packages\relay-opencode`
+- `packages\relay-antigravity`
 
 Use this path when you want the generated package without keeping the whole source repository in place.
 
@@ -100,7 +102,7 @@ Expected result:
 From the generated unified package root:
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\run_delegate_agent.ps1 -Prompt "Please review this design doc." -Backend auto -WhatIf
 ```
 
@@ -126,7 +128,7 @@ Expected result:
 
 ## What Gets Installed
 
-For `codex-delegate-agent`, the package includes:
+For `relay-agent`, the package includes:
 
 - `SKILL.md`
 - `agents\openai.yaml`
@@ -143,8 +145,14 @@ For `codex-delegate-agent`, the package includes:
 Unified backend-specific tuning is done through workspace-local files under:
 
 ```text
-<workdir>\.codex-delegate-agent\backends\
+<workdir>\.relay-agent\backends\
 ```
+
+The same build also generates specialist packages:
+
+- `packages\relay-claude`
+- `packages\relay-opencode`
+- `packages\relay-antigravity`
 
 ## Upgrade Procedure
 

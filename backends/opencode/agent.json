@@ -1,7 +1,7 @@
 {
-  "name": "codex-delegate-opencode",
+  "name": "relay-opencode",
   "description": "Delegate coding implementation to OpenCode while Codex keeps responsibility for task decomposition, review, verification, retry prompts, and git commits.",
-  "displayName": "Codex Delegate OpenCode",
+  "displayName": "Relay OpenCode",
   "shortDescription": "Delegate coding work to OpenCode, then review",
-  "defaultPrompt": "Use $codex-delegate-opencode to delegate this coding task to OpenCode, review the diff, and commit only verified changes."
+  "defaultPrompt": "Use $relay-opencode to delegate this coding task to OpenCode, review the diff, and commit only verified changes."
 }

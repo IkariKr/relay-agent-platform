@@ -30,7 +30,7 @@ try {
     if ([string]::IsNullOrWhiteSpace($ForkUrl)) {
         Write-Host ""
         Write-Host "No ForkUrl provided. To connect your fork later:"
-        Write-Host "  .\scripts\connect-fork.ps1 -ForkUrl https://github.com/<you>/codex-delegate-claude.git"
+        Write-Host "  .\scripts\connect-fork.ps1 -ForkUrl https://github.com/<you>/relay-agent-platform.git"
         exit 0
     }
 

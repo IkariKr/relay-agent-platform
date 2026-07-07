@@ -1,11 +1,11 @@
-# Codex Delegate V1 Roadmap
+# Relay V1 Roadmap
 
 ## Document Status
 
 - Status: release-ready working plan
 - Target: public v1 release
-- Primary package target: `packages/codex-delegate-agent`
-- Secondary package target: `packages/codex-delegate-opencode`
+- Primary package target: `packages/relay-agent`
+- Secondary package target: `packages/relay-opencode`
 - Release recommendation: ship `v1.0.0` only after all release gates in this document are green
 - Validation snapshot: required release docs added and release smoke checks passed on July 5, 2026
 
@@ -14,7 +14,7 @@
 The repository is now in a `v1` release-ready state, meaning:
 
 - the required public release docs exist
-- package positioning is documented with `codex-delegate-agent` as the default recommendation
+- package positioning is documented with `relay-agent` as the default recommendation
 - package build and validation checks pass
 - generated-package smoke tests for routing and rule management pass
 
@@ -24,7 +24,7 @@ The remaining release action is operational rather than product-defining:
 
 ## Goal
 
-Deliver a publicly releasable `v1` of the Codex Delegate skill family with:
+Deliver a publicly releasable `v1` of the Relay skill family with:
 
 - a stable unified entrypoint for `Claude` and `OpenCode`
 - transparent, user-manageable auto routing
@@ -37,14 +37,14 @@ Deliver a publicly releasable `v1` of the Codex Delegate skill family with:
 
 The `v1` release should present the project as three clear surfaces:
 
-1. `codex-delegate-claude`
+1. `relay-claude`
    Existing Claude-oriented package kept compatible for users who want the original behavior.
-2. `codex-delegate-opencode`
+2. `relay-opencode`
    OpenCode-oriented package for users who want local/provider-driven execution directly.
-3. `codex-delegate-agent`
+3. `relay-agent`
    The flagship unified package and default recommendation for new users.
 
-For public release, `codex-delegate-agent` should be treated as the main product, while the Claude and OpenCode packages remain explicit specialist entrypoints.
+For public release, `relay-agent` should be treated as the main product, while the Claude and OpenCode packages remain explicit specialist entrypoints.
 
 ## Release Principles
 
@@ -58,7 +58,7 @@ For public release, `codex-delegate-agent` should be treated as the main product
 
 The project is ready for public `v1.0.0` only when all of the following are true:
 
-- `codex-delegate-agent` is the clearly documented default package for new users.
+- `relay-agent` is the clearly documented default package for new users.
 - A new user can install a package, verify prerequisites, and run a first successful command from docs alone.
 - Auto routing behavior is transparent, explainable, and user-editable without source changes.
 - Structured and natural-language rule management both work from generated package artifacts.
@@ -294,7 +294,7 @@ Users may not understand whether to install `claude`, `opencode`, or `agent`.
 Mitigation:
 
 - write `package-selection.md` early
-- make `codex-delegate-agent` the explicit default recommendation
+- make `relay-agent` the explicit default recommendation
 - keep the specialist packages documented as opt-in choices
 
 ### Risk 2: Routing Looks Powerful But Feels Unpredictable
@@ -343,9 +343,9 @@ Mitigation:
 The following should be treated as stable in `v1` unless a blocker appears:
 
 - package names:
-  - `codex-delegate-claude`
-  - `codex-delegate-opencode`
-  - `codex-delegate-agent`
+  - `relay-claude`
+  - `relay-opencode`
+  - `relay-agent`
 - primary scripts:
   - `scripts/run_delegate_agent.ps1`
   - `scripts/manage_auto_routing.ps1`

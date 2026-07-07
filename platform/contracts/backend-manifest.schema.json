@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://codex-delegate.local/schemas/backend-manifest.schema.json",
-  "title": "Codex Delegate Backend Manifest",
+  "title": "Relay Backend Manifest",
   "type": "object",
   "required": [
     "id",

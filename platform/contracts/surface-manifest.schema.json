@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://codex-delegate.local/schemas/surface-manifest.schema.json",
-  "title": "Codex Delegate Surface Manifest",
+  "title": "Relay Surface Manifest",
   "type": "object",
   "required": [
     "id",

@@ -1,8 +1,8 @@
-# Routing Guide
+# Relay Routing Guide
 
 ## Purpose
 
-`codex-delegate-agent` routes work to Claude, OpenCode, or Antigravity through a transparent rule table.
+`relay-agent` routes work to Claude, OpenCode, or Antigravity through a transparent rule table.
 
 The routing contract is intentionally simple:
 
@@ -42,7 +42,7 @@ or:
 
 the selected backend overrides all auto-routing rules.
 
-Backend-specific tuning does not happen through unified top-level flags anymore. Use backend-local config files under `.codex-delegate-agent/backends/`.
+Backend-specific tuning does not happen through unified top-level flags anymore. Use backend-local config files under `.relay-agent/backends/`.
 
 ### Auto Routing
 
@@ -59,13 +59,17 @@ the script loads the first routing config it can find and resolves the backend f
 When `-Backend auto` and `-AutoStrategy config` are used, config lookup order is:
 
 1. `-AutoConfigPath`
-2. `CODEX_DELEGATE_AGENT_CONFIG`
-3. `<workdir>\.codex-delegate-agent\routing.json`
-4. `<workdir>\.codex-delegate-agent.json`
+2. `RELAY_AGENT_CONFIG`
+3. `<workdir>\.relay-agent\routing.json`
+4. `<workdir>\.relay-agent.json`
 5. package `auto-routing.json`
 6. package `auto-routing.default.json`
 
 The first file found wins.
+
+Compatibility note:
+
+- `CODEX_DELEGATE_AGENT_CONFIG` is still accepted as a legacy fallback during the rename migration window.
 
 ## Rule Table Schema
 
@@ -154,7 +158,7 @@ Initialize a workspace-local routing config:
 That creates:
 
 ```text
-<workdir>\.codex-delegate-agent\routing.json
+<workdir>\.relay-agent\routing.json
 ```
 
 This is the recommended routing customization point.
@@ -162,9 +166,9 @@ This is the recommended routing customization point.
 Per-backend tuning lives beside it:
 
 ```text
-<workdir>\.codex-delegate-agent\backends\claude.json
-<workdir>\.codex-delegate-agent\backends\opencode.json
-<workdir>\.codex-delegate-agent\backends\antigravity.json
+<workdir>\.relay-agent\backends\claude.json
+<workdir>\.relay-agent\backends\opencode.json
+<workdir>\.relay-agent\backends\antigravity.json
 ```
 
 ## Add A Rule Structurally

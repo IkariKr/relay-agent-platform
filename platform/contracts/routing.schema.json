@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://codex-delegate.local/schemas/routing.schema.json",
-  "title": "Codex Delegate Routing Config",
+  "title": "Relay Routing Config",
   "type": "object",
   "required": [
     "version",

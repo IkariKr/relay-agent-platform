@@ -1,4 +1,4 @@
-# Codex Delegate Architecture
+# Relay Architecture
 
 This document describes the current repository shape after the `v2` platform migration.
 
@@ -10,7 +10,7 @@ The short version is:
 
 - the repo now follows a registry + adapter + surface architecture
 - backend addition is manifest-driven instead of hardcoded in runtime, routing, build, and validation scripts
-- `Claude`, `OpenCode`, and `Antigravity` are all registered backends, and `codex-delegate-agent` is the router surface
+- `Claude`, `OpenCode`, and `Antigravity` are all registered backends, and `relay-agent` is the router surface
 
 The sections below describe the current codebase layout and the remaining historical exceptions.
 
@@ -32,9 +32,9 @@ Related planning documents:
 - `platform/`: platform contracts and runtime modules shared by the router surface.
 - `backends/`: backend-specific metadata and behavior notes.
 - `surfaces/`: public surface manifests that drive generated packages.
-- `packages/codex-delegate-antigravity/`: installable Antigravity package generated and validated from shared sources.
-- `packages/codex-delegate-opencode/`: installable OpenCode package generated and validated from shared sources.
-- `packages/codex-delegate-agent/`: unified multi-backend entrypoint package generated from shared and backend sources.
+- `packages/relay-antigravity/`: installable Antigravity package generated and validated from shared sources.
+- `packages/relay-opencode/`: installable OpenCode package generated and validated from shared sources.
+- `packages/relay-agent/`: unified multi-backend entrypoint package generated from shared and backend sources.
 - `scripts/build-packages.ps1`: regenerates package metadata and runtime copies by iterating over declared surfaces and backends.
 - `scripts/validate-packages.ps1`: manifest-driven consistency checks for generated outputs.
 - `scripts/connect-fork.ps1`: switches the repository to `origin=<your fork>` and `upstream=<source repo>` when the fork URL is available.

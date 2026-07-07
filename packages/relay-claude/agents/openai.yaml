@@ -1,0 +1,4 @@
+interface:
+  display_name: "Relay Claude"
+  short_description: "Delegate coding work to Claude, then review"
+  default_prompt: "Use $relay-claude to delegate this coding task to Claude Code, review the diff, and commit only verified changes."

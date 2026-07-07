@@ -1,11 +1,11 @@
-# Quickstart
+# Relay Quickstart
 
 ## Fastest Path
 
 If you only want the recommended path:
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\run_delegate_agent.ps1 -Prompt "Review this API design and point out risks." -Backend auto -WhatIf
 ```
 
@@ -16,7 +16,7 @@ That uses the unified package, lets routing decide, and prints the backend decis
 ### 1. Unified Agent With Auto Routing
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\run_delegate_agent.ps1 -Prompt "Please review this architecture plan." -Backend auto -WhatIf
 ```
 
@@ -28,31 +28,31 @@ Use this when:
 ### 2. Unified Agent With Explicit Claude
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\run_delegate_agent.ps1 -Prompt "Review this refactor plan in detail." -Backend claude -WhatIf
 ```
 
 Use this when:
 
 - you want Claude regardless of routing rules
-- you want the unified surface to route to Claude while keeping Claude-specific tuning in `.codex-delegate-agent/backends/claude.json`
+- you want the unified surface to route to Claude while keeping Claude-specific tuning in `.relay-agent/backends/claude.json`
 
 ### 3. Unified Agent With Explicit OpenCode
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\run_delegate_agent.ps1 -Prompt "Make a quick fix in this small module." -Backend opencode -WhatIf
 ```
 
 Use this when:
 
 - you want OpenCode regardless of routing rules
-- you want direct local/provider-oriented execution through the unified surface while keeping OpenCode tuning in `.codex-delegate-agent/backends/opencode.json`
+- you want direct local/provider-oriented execution through the unified surface while keeping OpenCode tuning in `.relay-agent/backends/opencode.json`
 
 ### 4. Unified Agent With Explicit Antigravity
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\run_delegate_agent.ps1 -Prompt "Use agy for this bounded coding task." -Backend antigravity -WhatIf
 ```
 
@@ -64,7 +64,7 @@ Use this when:
 ### 5. Direct OpenCode Package
 
 ```powershell
-Set-Location .\packages\codex-delegate-opencode
+Set-Location .\packages\relay-opencode
 .\scripts\run_opencode_delegate.ps1 -Prompt "Implement a quick refactor." -WhatIf
 ```
 
@@ -76,7 +76,7 @@ Use this when:
 ### 6. Direct Antigravity Package
 
 ```powershell
-Set-Location .\packages\codex-delegate-antigravity
+Set-Location .\packages\relay-antigravity
 .\scripts\run_antigravity_delegate.ps1 -Prompt "Implement a bounded coding change." -WhatIf
 ```
 
@@ -88,7 +88,7 @@ Use this when:
 ### 7. Inspect Current Routing Rules
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\manage_auto_routing.ps1 -Action list -Workdir .
 ```
 
@@ -100,7 +100,7 @@ Use this when:
 ### 8. Explain Why A Prompt Routes A Certain Way
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\manage_auto_routing.ps1 -Action explain -Workdir . -Prompt "Need a quick fix for this minor bug."
 ```
 
@@ -112,7 +112,7 @@ Use this when:
 ### 9. Natural-Language Rule Inspection
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\manage_auto_routing_nl.ps1 -Request 'list current routing rules' -Workdir .
 ```
 
@@ -124,7 +124,7 @@ Use this when:
 ### 10. Natural-Language Rule Creation
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\manage_auto_routing_nl.ps1 -Request 'add rule: "quick-local", backend: opencode, reason: quick local routing, prompt keywords: quick, fix, minor' -Workdir . -Apply
 ```
 
@@ -149,9 +149,9 @@ This is the recommended first-run mode because it lets you validate installation
 For unified-surface backend tuning, create backend-local config files such as:
 
 ```text
-<workdir>\.codex-delegate-agent\backends\claude.json
-<workdir>\.codex-delegate-agent\backends\opencode.json
-<workdir>\.codex-delegate-agent\backends\antigravity.json
+<workdir>\.relay-agent\backends\claude.json
+<workdir>\.relay-agent\backends\opencode.json
+<workdir>\.relay-agent\backends\antigravity.json
 ```
 
 Use this for backend-specific settings like Claude output format, OpenCode model/provider choices, or Antigravity `agy` print settings. The unified runtime no longer exposes backend-specific top-level flags directly.

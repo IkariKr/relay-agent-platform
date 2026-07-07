@@ -13,12 +13,20 @@ if ([string]::IsNullOrWhiteSpace($WorkspaceSkillsDir)) {
 
 $links = @(
     @{
-        Name = "codex-delegate-opencode"
-        Target = Join-Path $repoRoot "packages\codex-delegate-opencode"
+        Name = "relay-agent"
+        Target = Join-Path $repoRoot "packages\relay-agent"
     },
     @{
-        Name = "codex-delegate-agent"
-        Target = Join-Path $repoRoot "packages\codex-delegate-agent"
+        Name = "relay-claude"
+        Target = Join-Path $repoRoot "packages\relay-claude"
+    },
+    @{
+        Name = "relay-opencode"
+        Target = Join-Path $repoRoot "packages\relay-opencode"
+    },
+    @{
+        Name = "relay-antigravity"
+        Target = Join-Path $repoRoot "packages\relay-antigravity"
     }
 )
 

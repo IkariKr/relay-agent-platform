@@ -1,4 +1,6 @@
-# Codex Delegate Claude
+# Relay
+
+> Relay is the new name for the former `codex-delegate-*` skill family.
 
 先说结论：如果你想让 Codex 负责拆解任务、审查结果、跑验证、控制提交，同时把真正的实现工作交给 Claude Code 或 OpenCode，这个仓库就是给你用的。
 
@@ -21,7 +23,7 @@
 1. 代理改得很快，但 scope 很容易飘
 2. 改完之后没有一个稳定的 review 和 verification 闭环
 
-`codex-delegate-claude` 的核心思路很直接：
+`Relay` 的核心思路很直接：
 
 - 把“执行”交给后端
 - 把“判断”留给 Codex
@@ -45,7 +47,7 @@
 ### 路线 A：推荐的统一入口
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\run_delegate_agent.ps1 -Prompt "Review this API design and point out risks." -Backend auto -WhatIf
 ```
 
@@ -58,7 +60,7 @@ Set-Location .\packages\codex-delegate-agent
 ### 路线 B：明确指定 Claude
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\run_delegate_agent.ps1 -Prompt "Review this refactor plan in detail." -Backend claude -WhatIf
 ```
 
@@ -67,7 +69,7 @@ Set-Location .\packages\codex-delegate-agent
 ### 路线 C：明确指定 OpenCode
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\run_delegate_agent.ps1 -Prompt "Make a quick fix in this small module." -Backend opencode -WhatIf
 ```
 
@@ -96,10 +98,14 @@ Set-Location .\packages\codex-delegate-agent
   共享文档和公共 PowerShell 逻辑
 - `backends/`
   各后端自己的元数据、脚本和行为说明
-- `packages/codex-delegate-agent/`
+- `packages/relay-agent/`
   推荐使用的统一多后端包
-- `packages/codex-delegate-opencode/`
+- `packages/relay-claude/`
+  Claude 专用包
+- `packages/relay-opencode/`
   OpenCode 专用包
+- `packages/relay-antigravity/`
+  Antigravity 专用包
 - `scripts/build-packages.ps1`
   用来重新生成安装包内容
 - `scripts/validate-packages.ps1`
@@ -120,9 +126,10 @@ Set-Location .\packages\codex-delegate-agent
 
 这样你会同时拿到：
 
-- `codex-delegate-claude`
-- `codex-delegate-agent`
-- `codex-delegate-opencode`
+- `relay-agent`
+- `relay-claude`
+- `relay-opencode`
+- `relay-antigravity`
 
 如果你只是单纯想用，也可以直接复制生成好的 package。
 

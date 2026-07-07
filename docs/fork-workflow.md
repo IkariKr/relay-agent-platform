@@ -4,7 +4,7 @@ This repository still starts from the upstream Claude-only skill, but it now car
 
 ## Current Recommendation
 
-1. Fork `IkariKr/codex-delegate-claude` on GitHub.
+1. Fork `IkariKr/relay-agent-platform` on GitHub.
 2. Point local `origin` to your fork.
 3. Keep the original repository as `upstream`.
 4. Do feature work on topic branches such as `feat/opencode-shared-core`.
@@ -21,7 +21,7 @@ git remote -v
 Connect your fork once you have the URL:
 
 ```powershell
-.\scripts\connect-fork.ps1 -ForkUrl https://github.com/<you>/codex-delegate-claude.git
+.\scripts\connect-fork.ps1 -ForkUrl https://github.com/<you>/relay-agent-platform.git
 ```
 
 Refresh upstream later:

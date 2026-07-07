@@ -6,14 +6,16 @@
 - Start with `-Backend auto`; the default strategy is now `config`.
 - The unified surface now exposes only platform-level parameters.
 - Backend-specific tuning belongs in workspace-local config files such as:
-  - `<workdir>/.codex-delegate-agent/backends/claude.json`
-  - `<workdir>/.codex-delegate-agent/backends/opencode.json`
-  - `<workdir>/.codex-delegate-agent/backends/antigravity.json`
+  - `<workdir>/.relay-agent/backends/claude.json`
+  - `<workdir>/.relay-agent/backends/opencode.json`
+  - `<workdir>/.relay-agent/backends/antigravity.json`
 - The default routing config lives at `auto-routing.default.json`, and local overrides can come from:
   - `-AutoConfigPath <path>`
-  - `CODEX_DELEGATE_AGENT_CONFIG`
-  - `<workdir>/.codex-delegate-agent/routing.json`
-  - `<workdir>/.codex-delegate-agent.json`
+  - `RELAY_AGENT_CONFIG`
+  - `<workdir>/.relay-agent/routing.json`
+  - `<workdir>/.relay-agent.json`
+- Legacy compatibility:
+  - `CODEX_DELEGATE_AGENT_CONFIG` is still accepted during the rename migration window.
 - Rules are a transparent ordered table with `enabled`, `backend`, `reason`, and `when.*` match fields.
 - The first enabled matching rule wins.
 - Use `-Backend opencode` when you explicitly want OpenCode's local model/provider pipeline.

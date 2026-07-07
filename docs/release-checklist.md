@@ -69,7 +69,7 @@ Run these from a clean generated package path.
 ### 1. Unified Agent Auto Routing
 
 ```powershell
-Set-Location .\packages\codex-delegate-agent
+Set-Location .\packages\relay-agent
 .\scripts\run_delegate_agent.ps1 -Prompt "Please review this architecture plan." -Backend auto -WhatIf
 ```
 
@@ -146,7 +146,7 @@ Check:
 
 - commands in docs use real script names
 - commands align with current parameter names
-- package-selection guidance clearly recommends `codex-delegate-agent` by default
+- package-selection guidance clearly recommends `relay-agent` by default
 - install docs mention `build-packages.ps1` and `validate-packages.ps1`
 - troubleshooting docs cover PATH, routing precedence, appended rule order, and PowerShell execution policy
 

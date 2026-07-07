@@ -1,4 +1,4 @@
-# Codex Delegate Platform Architecture V2
+# Relay Platform Architecture V2
 
 ## Status
 
@@ -13,7 +13,7 @@
 - Phase 3 complete: package build and validation iterate over declared backends and surfaces.
 - Phase 4 complete: `antigravity` is integrated as a registered backend and generated specialist surface.
 - Phase 5 complete: deprecated unified-surface backend-specific compatibility flags have been removed.
-- Root surface decision complete: the repo root remains the generated `claude` specialist surface driven by `surfaces/claude/surface.json`.
+- Root surface decision complete: the specialist `claude` surface is now generated into `packages/relay-claude` from `surfaces/claude/surface.json`.
 
 ## Why The V1 Shape Did Not Scale
 
@@ -21,9 +21,9 @@ Before the migration, the repository was effective for `Claude` + `OpenCode`, bu
 
 At that time the codebase was centered around three public surfaces:
 
-- root `codex-delegate-claude`
-- generated `packages/codex-delegate-opencode`
-- generated `packages/codex-delegate-agent`
+- generated `packages/relay-claude`
+- generated `packages/relay-opencode`
+- generated `packages/relay-agent`
 
 That shipped `v1` quickly, but it also baked backend knowledge into too many places:
 
@@ -185,9 +185,10 @@ surfaces/
     surface.json
 
 packages/
-  codex-delegate-opencode/
-  codex-delegate-agent/
-  codex-delegate-antigravity/
+  relay-claude/
+  relay-opencode/
+  relay-agent/
+  relay-antigravity/
 
 docs/
 ```
@@ -247,10 +248,10 @@ This creates a clean distinction:
 
 Under this model:
 
-- `codex-delegate-claude` is a specialist surface backed by `claude`
-- `codex-delegate-opencode` is a specialist surface backed by `opencode`
-- `codex-delegate-antigravity` is a specialist surface backed by `antigravity`
-- `codex-delegate-agent` is a router surface backed by the backend registry
+- `relay-claude` is a specialist surface backed by `claude`
+- `relay-opencode` is a specialist surface backed by `opencode`
+- `relay-antigravity` is a specialist surface backed by `antigravity`
+- `relay-agent` is a router surface backed by the backend registry
 
 ### Migration of `backends/agent/`
 
@@ -269,7 +270,7 @@ The `agent` id should be reserved for the router surface and must never appear a
 
 ### 1. Keep a generic public runtime
 
-`codex-delegate-agent` should stop growing backend-specific top-level flags.
+`relay-agent` should stop growing backend-specific top-level flags.
 
 The unified runtime should keep only platform-level parameters such as:
 
@@ -311,7 +312,7 @@ This change should be documented as part of the compatibility window so downstre
 Advanced backend options should live in backend-local config files:
 
 ```text
-.codex-delegate-agent/
+.relay-agent/
   routing.json
   backends/
     claude.json
@@ -339,9 +340,9 @@ Specialist packages should continue exposing backend-native controls directly.
 
 That means:
 
-- `codex-delegate-claude` can keep `PermissionMode`, budget, and tool controls
-- `codex-delegate-opencode` can keep model/provider/agent controls
-- `codex-delegate-antigravity` can expose whatever `agy` genuinely supports
+- `relay-claude` can keep `PermissionMode`, budget, and tool controls
+- `relay-opencode` can keep model/provider/agent controls
+- `relay-antigravity` can expose whatever `agy` genuinely supports
 
 The platform does not need to force every backend into the same user-facing CLI.
 
@@ -474,10 +475,10 @@ This redesign was implemented as an **evolutionary migration**, not a flag day r
 ### Preserve in the first migration wave
 
 - package names:
-  - `codex-delegate-claude`
-  - `codex-delegate-opencode`
-  - `codex-delegate-agent`
-- root repo continuing to act as the `claude` specialist surface
+  - `relay-claude`
+  - `relay-opencode`
+  - `relay-agent`
+- generated specialist packages including `relay-claude`
 - current specialist backend scripts
 - current `v1` routing semantics
 
@@ -492,7 +493,7 @@ This redesign was implemented as an **evolutionary migration**, not a flag day r
 
 In the unified surface, `Claude*` and `Opencode*` flags were treated as compatibility shims for one migration window.
 
-That window is now closed. Backend-specific tuning is configured through backend-local config objects under `.codex-delegate-agent/backends/`.
+That window is now closed. Backend-specific tuning is configured through backend-local config objects under `.relay-agent/backends/`.
 
 ## What This Means For Antigravity
 
@@ -502,7 +503,7 @@ Once the platform layer exists, adding `agy` should become a bounded backend tas
 2. add `backends/antigravity/run_antigravity_delegate.ps1`
 3. add `backends/antigravity/skill-backend.md`
 4. add `surfaces/antigravity/surface.json`
-5. optionally add `codex-delegate-antigravity` as a generated specialist package
+5. optionally add `relay-antigravity` as a generated specialist package
 6. add or update routing defaults to mention `antigravity` only in config, not in code branches
 
 The `antigravity` backend manifest should use:
@@ -546,7 +547,7 @@ That is the desired outcome of this redesign:
 
 - remove deprecated unified-surface backend-specific flags
 - consider renaming repo-level concepts from "skill family" to "platform"
-- keep the root package as the generated Claude specialist surface defined by `surfaces/claude/surface.json`
+- keep the generated `relay-claude` package as the Claude specialist surface defined by `surfaces/claude/surface.json`
 
 ## Architecture Summary
 
