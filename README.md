@@ -18,7 +18,9 @@
 - Claude / OpenCode / Antigravity 负责做一轮有约束的实现
 - 最后由 Codex 决定要不要重试、验证、提交
 
-一句话说，这是一套把“代理执行”做成可审查、可验证、可回滚、可路由流程的基础设施。
+这里的 `Codex`，指的是你当前使用的 Codex / CodeX 主控端。
+
+一句话说，`Relay` 是一套把“代理执行”做成可审查、可验证、可回滚、可路由流程的基础设施。
 
 ## 这个项目到底在解决什么
 
@@ -33,20 +35,43 @@
 - 把判断留给 Codex
 - 把路由、重试、安装、包装、共享逻辑收敛成可维护的脚本和 package
 
+它的工作流大致是这样:
+
+```text
+[ 你的需求 ]
+    |
+    v
+[ Codex 总控 ]
+    |  拆解任务、设置边界、选择后端
+    v
+[ Relay 路由 ]
+    |--> relay-claude
+    |--> relay-opencode
+    `--> relay-antigravity
+           |
+           v
+      [ 返回实现结果 ]
+           |
+           v
+[ Codex 复核 ]
+    |  决定接受、重试、验证或打回
+    v
+[ 最终结果 ]
+```
+
 所以它更适合认真做工程的人，而不是只追求“一条命令全自动提交”的玩法。
 
-## 适合谁
+## 给使用者
 
 如果你属于下面这些场景，`Relay` 会很顺手:
 
 - 你想让 Claude Code 落地实现，但不想让它直接 commit
 - 你想统一接入多个 worker，而不是每个后端各玩各的
-- 你希望先 `-WhatIf` 看路由结果，再决定是否真跑
-- 你正在维护自己的 Codex skill / agent workflow，希望架构更清晰
+- 你希望把不同后端统一成一套稳定入口
 
 如果你要的是“代理自己改、自己测、自己提交、自己收尾”，那它就不是按这个产品哲学设计的。
 
-## 先记住这个定位
+### 先记住这个定位
 
 `Relay` 现在提供的是一套多后端委托能力:
 
@@ -61,56 +86,45 @@
 
 如果你是第一次接触，直接从 `relay-agent` 开始就对了。
 
-## 3 分钟感受一下
+### 3 分钟感受一下
 
-### 1. 推荐入口：统一路由
+下面这几句，都是直接发给 Codex 对话框的。
 
-```powershell
-Set-Location .\packages\relay-agent
-.\scripts\run_delegate_agent.ps1 -Prompt "Review this API design and point out risks." -Backend auto -WhatIf
+1. 安装
+
+```text
+请帮我在 Codex 里安装这个 GitHub 项目：https://github.com/IkariKr/relay-agent-platform
 ```
 
-这一条最适合第一次上手，因为它会:
+2. 使用
 
-- 走统一入口
-- 使用自动路由
-- 先打印“它会选哪个 backend”
-- 不真的执行后端
-
-### 2. 明确指定 Claude
-
-```powershell
-Set-Location .\packages\relay-agent
-.\scripts\run_delegate_agent.ps1 -Prompt "Review this refactor plan in detail." -Backend claude -WhatIf
+```text
+/relay
 ```
 
-适合你已经知道这次就想让 Claude 来接。
+Codex 会走默认统一入口，按当前配置选择后端，然后开始这一轮委托执行。
 
-### 3. 明确指定 Antigravity
+3. 指定 Claude
 
-```powershell
-Set-Location .\packages\relay-agent
-.\scripts\run_delegate_agent.ps1 -Prompt "Use agy for this bounded coding task." -Backend antigravity -WhatIf
+```text
+/relayclaude
 ```
 
-适合你想验证 `agy` 路径和 Antigravity 专用配置有没有接通。
+Codex 会直接走 Claude 这条后端链路。
 
-## 我更推荐的真实使用姿势
+如果你想把边界收得更紧，也支持继续补参数，比如 `backend`、`model`、`prompt`。
 
-别一上来就让后端真跑。更稳的顺序是:
+### 使用者继续往下看
 
-1. 先用 `run_delegate_agent.ps1 -WhatIf` 看路由
-2. 再用 `manage_auto_routing.ps1 -Action list` 看当前规则
-3. 用 `manage_auto_routing.ps1 -Action explain` 看某条 prompt 为什么会分到那个后端
-4. 确认没问题后，再去掉 `-WhatIf`
+- [docs/quickstart.md](docs/quickstart.md)
+- [docs/package-selection.md](docs/package-selection.md)
+- [docs/troubleshooting.md](docs/troubleshooting.md)
 
-这套节奏的好处很实际:
+## 给维护者
 
-- 安装问题会更早暴露
-- 路由逻辑更透明
-- 真实执行前你就知道风险点
+如果你不是单纯想使用它，而是准备继续扩后端、改路由、调打包、做发布，那从这里开始看。
 
-## 仓库结构很克制，也很实用
+### 仓库结构
 
 这个仓库不是“只有几个脚本拼起来”的一次性产物，它已经拆成了几层:
 
@@ -131,11 +145,9 @@ Set-Location .\packages\relay-agent
 - `scripts/validate-packages.ps1`
   校验生成结果
 
-如果你是使用者，先看 `packages/`。
+维护时重点看 `shared/`、`backends/`、`scripts/` 和 `docs/`。
 
-如果你是维护者，重点看 `shared/`、`backends/`、`scripts/` 和 `docs/`。
-
-## 安装和维护建议
+### 安装和维护建议
 
 更推荐的维护方式，是把整个仓库放进 Codex skills 目录，然后生成并链接 package:
 
@@ -157,18 +169,10 @@ Set-Location .\packages\relay-agent
 
 - [docs/installation.md](docs/installation.md)
 
-## 推荐阅读顺序
+### 维护者推荐阅读顺序
 
-如果你想快速建立全局理解，建议按这个顺序看:
-
-1. [docs/quickstart.md](docs/quickstart.md)
-2. [docs/package-selection.md](docs/package-selection.md)
-3. [docs/routing-guide.md](docs/routing-guide.md)
-4. [docs/installation.md](docs/installation.md)
-5. [docs/troubleshooting.md](docs/troubleshooting.md)
-
-如果你是维护者，再继续看:
-
+- [docs/installation.md](docs/installation.md)
+- [docs/routing-guide.md](docs/routing-guide.md)
 - [docs/architecture.md](docs/architecture.md)
 - [docs/platform-architecture-v2.md](docs/platform-architecture-v2.md)
 - [docs/release-checklist.md](docs/release-checklist.md)
