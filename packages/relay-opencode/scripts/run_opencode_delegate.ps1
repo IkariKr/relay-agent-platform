@@ -424,7 +424,10 @@ foreach ($file in $AttachFiles) {
     }
 }
 
-$opencodeArgs += $Prompt
+if (-not [string]::IsNullOrWhiteSpace($Prompt)) {
+    $opencodeArgs += "--"
+    $opencodeArgs += $Prompt
+}
 
 Write-Host "Workdir: $resolvedWorkdir"
 Write-Host "OpenCode: $opencodePath"
