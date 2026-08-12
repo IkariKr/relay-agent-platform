@@ -1,8 +1,8 @@
-## Review Checklist
+## Codex Review Checklist
 
-- The diff directly satisfies the stated goal.
-- No unrelated files or generated noise were included.
-- Existing dirty files were not accidentally folded into the delegated change.
-- Tests or checks cover the changed behavior, or the residual risk is explicitly acceptable.
-- Timeout or idle-stop runs were followed by diff inspection before any retry or commit.
-- The final commit contains only reviewed, intended changes from this delegation cycle.
+- The worker used the requested backend, model, agent, prompt, and native parameters.
+- The raw worker output and exit code are available for review.
+- The diff directly satisfies the requested task and does not include unrelated changes.
+- Relevant tests or checks were run by Codex or a Codex subagent.
+- Any retry is a deliberate new Codex decision, not an automatic replay by Relay.
+- Git status, staging, commits, and pull requests remain explicit Codex actions.

@@ -1,36 +1,7 @@
 ## Unified Backend Notes
 
-- Preferred wrapper:
-  `scripts/run_delegate_agent.ps1`
-- This wrapper is a routing layer for multi-backend delegation.
-- Start with `-Backend auto`; the default strategy is now `config`.
-- The unified surface now exposes only platform-level parameters.
-- Backend-specific tuning belongs in workspace-local config files such as:
-  - `<workdir>/.relay-agent/backends/claude.json`
-  - `<workdir>/.relay-agent/backends/opencode.json`
-  - `<workdir>/.relay-agent/backends/antigravity.json`
-- The default routing config lives at `auto-routing.default.json`, and local overrides can come from:
-  - `-AutoConfigPath <path>`
-  - `RELAY_AGENT_CONFIG`
-  - `<workdir>/.relay-agent/routing.json`
-  - `<workdir>/.relay-agent.json`
-- Legacy compatibility:
-  - `CODEX_DELEGATE_AGENT_CONFIG` is still accepted during the rename migration window.
-- Rules are a transparent ordered table with `enabled`, `backend`, `reason`, and `when.*` match fields.
-- The first enabled matching rule wins.
-- Use `-Backend opencode` when you explicitly want OpenCode's local model/provider pipeline.
-- Use `-Backend claude` when you explicitly want Claude.
-- Use `-Backend antigravity` when you explicitly want `agy`.
-- Explicit backend selection always wins over auto routing.
-- If auto routing selects an unavailable backend, the wrapper walks `fallback_backends` in order and prints the reason.
-- Use `scripts/manage_auto_routing.ps1` to list, explain, add, update, enable, disable, remove, or initialize user routing rules.
-- Use `scripts/manage_auto_routing_nl.ps1` when you want a natural-language wrapper that translates a request into a structured management command.
-- Common management commands:
-  - `scripts/manage_auto_routing.ps1 -Action list -Workdir <path>`
-  - `scripts/manage_auto_routing.ps1 -Action explain -Workdir <path> -Prompt "<text>"`
-  - `scripts/manage_auto_routing.ps1 -Action add -Workdir <path> -RuleName "<name>" -Backend opencode -Reason "<why>" -PromptAnyRegex "(?i)\bquick\b"`
-  - `scripts/manage_auto_routing.ps1 -Action update -Workdir <path> -RuleName "<name>" -Backend claude`
-- Natural-language wrapper examples:
-  - `scripts/manage_auto_routing_nl.ps1 -Request 'list current routing rules' -Workdir <path>`
-  - `scripts/manage_auto_routing_nl.ps1 -Request 'explain prompt: "please review this design doc"' -Workdir <path>`
-  - `scripts/manage_auto_routing_nl.ps1 -Request 'add rule: "quick-local", backend: opencode, reason: quick local routing, prompt keywords: quick, fix, minor' -Workdir <path> -Apply`
+- Preferred thin entrypoint: `scripts/run_relay.ps1`.
+- `-Backend` is required and must be `opencode`, `claude`, or `antigravity`.
+- `-Model`, `-Agent`, and repeated `-PassThrough` values are passed to the native CLI without Relay model scoring or intent inference.
+- `-DryRun` prints the constructed native command without checking or launching a backend.
+- Routing is intentionally separate: use the routing scripts only when automatic backend selection is explicitly desired.

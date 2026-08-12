@@ -9,7 +9,7 @@
   "capabilities": {
     "json_output": true,
     "whatif_supported": true,
-    "timeout_wrapped": true,
+    "timeout_wrapped": false,
     "interactive_approval_control": true,
     "file_attachment_support": false,
     "model_selection_support": false

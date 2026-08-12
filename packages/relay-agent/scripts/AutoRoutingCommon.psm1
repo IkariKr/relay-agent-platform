@@ -502,12 +502,6 @@ function Resolve-AutoConfiguredBackend {
         }
     }
 
-    foreach ($pair in $availability.GetEnumerator()) {
-        if ($pair.Key -ne $selectedBackend -and -not $orderedFallbackCandidates.Contains([string]$pair.Key)) {
-            $orderedFallbackCandidates.Add([string]$pair.Key)
-        }
-    }
-
     foreach ($fallbackCandidate in $orderedFallbackCandidates) {
         if ($availability.Contains($fallbackCandidate) -and $availability[$fallbackCandidate]) {
             return [pscustomobject]@{

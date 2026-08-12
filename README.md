@@ -13,11 +13,11 @@
 
 那这个仓库大概率就是你要找的东西。
 
-`Relay` 不是“让代理自己一路改到天亮”的全自动脚本，它更像一个面向 Codex 的委托平台:
+`Relay` 不是“让代理自己一路改到天亮”的全自动脚本；v2 将它收敛为面向 Codex 的**薄型多后端执行层**:
 
-- Codex 负责拆解任务、收紧边界、复核结果
-- Claude / OpenCode / Antigravity 负责做一轮有约束的实现
-- 最后由 Codex 决定要不要重试、验证、提交
+- Codex 主代理或原生 subagent 负责拆解任务、可见进度、复核结果、验证和提交
+- Claude / OpenCode / Antigravity 负责执行一条原生命令
+- Relay 只保留最小参数映射、透传、原始输出和退出码
 
 这里的 `Codex`，指的是你当前使用的 Codex / CodeX 主控端。
 
@@ -30,11 +30,11 @@
 1. 改得很快，但 scope 很容易飘
 2. 改完之后，没有稳定的 review 和 verification 闭环
 
-`Relay` 的思路非常直接:
+`Relay` 的 v2 思路非常直接:
 
-- 把执行交给后端
-- 把判断留给 Codex
-- 把路由、重试、安装、包装、共享逻辑收敛成可维护的脚本和 package
+- 把执行交给后端原生 CLI
+- 把任务生命周期和判断留给 Codex
+- 把路由变为显式可选能力，不再在默认链路中重试、超时、轮询 Git 或解析 JSONL
 
 它的工作流大致是这样:
 
@@ -85,7 +85,7 @@
 - `relay-antigravity`
   只走 Antigravity CLI 的专用包
 
-如果你是第一次接触，直接从 `relay-agent` 开始就对了。
+如果你是第一次接触，请从薄入口 `scripts/run_relay.ps1` 开始。
 
 ### 3 分钟感受一下
 
@@ -97,27 +97,28 @@
 请帮我在 Codex 里安装这个 GitHub 项目：https://github.com/IkariKr/relay-agent-platform
 ```
 
-2. 使用
+2. 使用（显式选择后端）
 
 ```text
-/relay
+./scripts/run_relay.ps1 -Backend opencode -Model opencode/deepseek-v4-flash-free -Prompt "<你的任务>"
 ```
 
-Codex 会走默认统一入口，按当前配置选择后端，然后开始这一轮委托执行。
+Relay 会打印并执行可复制的原生 OpenCode 命令；Codex 负责后续 review。
 
-3. 指定 Claude
+3. 使用原生 Codex subagent 管理长任务
 
 ```text
-/relayclaude
+请创建一个 Codex subagent，使用 relay 的 OpenCode DeepSeek 薄入口完成这个任务，并持续汇报公开的进度。
 ```
 
-Codex 会直接走 Claude 这条后端链路。
+这样进度、上下文、中断和后续决策由 Codex UI 管理，Relay 不再模拟这些能力。
 
 如果你想把边界收得更紧，也支持继续补参数，比如 `backend`、`model`、`prompt`。
 
 ### 使用者继续往下看
 
 - [docs/quickstart.md](docs/quickstart.md)
+- [docs/thin-relay-v2-sop.md](docs/thin-relay-v2-sop.md)
 - [docs/package-selection.md](docs/package-selection.md)
 - [docs/troubleshooting.md](docs/troubleshooting.md)
 

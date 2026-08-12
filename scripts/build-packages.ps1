@@ -131,8 +131,8 @@ function Sync-SharedModule {
     param([Parameter(Mandatory = $true)][string]$DestinationPackageRoot)
 
     Copy-File `
-        -SourcePath (Join-Path $sharedRoot "scripts\DelegateCommon.psm1") `
-        -DestinationPath (Join-Path $DestinationPackageRoot "shared\scripts\DelegateCommon.psm1")
+        -SourcePath (Join-Path $sharedRoot "scripts\ThinRelay.psm1") `
+        -DestinationPath (Join-Path $DestinationPackageRoot "shared\scripts\ThinRelay.psm1")
 }
 
 function Sync-PlatformRuntime {

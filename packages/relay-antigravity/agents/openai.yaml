@@ -1,4 +1,4 @@
 interface:
   display_name: "Relay Antigravity"
-  short_description: "Delegate coding work to Antigravity, then review"
-  default_prompt: "Use $relay-antigravity to delegate this coding task to Antigravity CLI, review the diff, and commit only verified changes."
+  short_description: "Run Antigravity with native controls"
+  default_prompt: "Use $relay-antigravity as a thin Antigravity execution layer. Preserve the user's explicit model, agent, and native parameters."

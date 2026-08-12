@@ -132,49 +132,25 @@ function Get-RoutingReferencedBackendIds {
     return @($backendIds | Sort-Object -Unique)
 }
 
-function Assert-RunDelegateAgentUsesRuntimeBackendValidation {
+function Assert-RunDelegateAgentUsesThinRelayContract {
     param([Parameter(Mandatory = $true)][string]$ScriptPath)
 
     $source = Get-Content -Raw -LiteralPath $ScriptPath
-    $match = [regex]::Match($source, '\[ValidateSet\((?<values>[^)]*)\)\]\s*\[string\]\$Backend')
-    if ($match.Success) {
-        Write-Error "run_delegate_agent.ps1 still hardcodes backend ValidateSet values. Phase 2+ expects runtime registry validation."
+    if ($source -notmatch '\[ValidateSet\("claude", "opencode", "antigravity"\)\]\[string\]\$Backend') {
+        Write-Error "run_delegate_agent.ps1 must require an explicit v2 backend: claude, opencode, or antigravity."
     }
 
-    if ($source -notmatch 'Test-DelegateBackendRegistered' -and $source -notmatch 'Get-DelegateBackendManifest') {
-        Write-Error "run_delegate_agent.ps1 does not appear to validate backend ids through the registry runtime."
-    }
-
-    $legacyParameters = @(
-        "ClaudePermissionMode",
-        "ClaudeOutputFormat",
-        "ClaudeAllowedTools",
-        "ClaudeDisallowedTools",
-        "ClaudeAllowBash",
-        "ClaudeMaxBudgetUsd",
-        "OpencodeOutputFormat",
-        "OpencodeModel",
-        "OpencodeModelIntent",
-        "OpencodeProviderPreference",
-        "OpencodeAllowPaidFallback",
-        "OpencodeRefreshModels",
-        "OpencodeAgent",
-        "OpencodeAttachFiles",
-        "OpencodeAutoApprove",
-        "OpencodePrintRawJsonTail"
-    )
-    foreach ($parameterName in $legacyParameters) {
-        if ($source -match ('\${0}\b' -f [regex]::Escape($parameterName))) {
-            Write-Error "run_delegate_agent.ps1 still exposes deprecated unified-surface backend-specific parameter '$parameterName'."
+    foreach ($forbidden in @("Invoke-DelegateAttempt", "Write-DelegatePostRunStatus", "Write-DelegateLogs", "Write-TemporaryBackendConfigFile", "MaxTurns")) {
+        if ($source -match $forbidden) {
+            Write-Error "run_delegate_agent.ps1 still contains removed v1 orchestration behavior '$forbidden'."
         }
     }
-
-    if ($source -match 'prefer-claude' -or $source -match 'prefer-opencode') {
-        Write-Error "run_delegate_agent.ps1 still exposes deprecated backend-specific AutoStrategy compatibility values."
+    if ($source -notmatch 'Invoke-ThinRelay') {
+        Write-Error "run_delegate_agent.ps1 must delegate through Invoke-ThinRelay."
     }
 }
 
-Assert-FileExists -Path (Join-Path $sharedRoot "scripts\DelegateCommon.psm1")
+Assert-FileExists -Path (Join-Path $sharedRoot "scripts\ThinRelay.psm1")
 Assert-FileExists -Path (Join-Path $repoRoot "scripts\run_claude_delegate.ps1")
 
 foreach ($contractFile in Get-ChildItem -Path (Join-Path $platformRoot "contracts") -Recurse -File) {
@@ -203,9 +179,9 @@ foreach ($surface in $surfaceManifests) {
 
     if ([string]$surface.package_root -ne ".") {
         Assert-FileContentMatches `
-            -SourcePath (Join-Path $sharedRoot "scripts\DelegateCommon.psm1") `
-            -DestinationPath (Join-Path $packageRoot "shared\scripts\DelegateCommon.psm1") `
-            -Message "Shared module copy is out of sync for surface '$($surface.id)'. Run scripts/build-packages.ps1."
+            -SourcePath (Join-Path $sharedRoot "scripts\ThinRelay.psm1") `
+            -DestinationPath (Join-Path $packageRoot "shared\scripts\ThinRelay.psm1") `
+            -Message "Thin Relay module copy is out of sync for surface '$($surface.id)'. Run scripts/build-packages.ps1."
     }
 
     $surfaceBackendIds = switch ([string]$surface.mode) {
@@ -293,7 +269,7 @@ foreach ($surface in $surfaceManifests) {
 
         $runDelegateScriptRelativePath = @($surface.public_scripts | Where-Object { ([System.IO.Path]::GetFileName([string]$_)) -eq "run_delegate_agent.ps1" } | Select-Object -First 1)
         if ($runDelegateScriptRelativePath.Count -gt 0) {
-            Assert-RunDelegateAgentUsesRuntimeBackendValidation -ScriptPath (Resolve-RepoRelativePath -RelativePath ([string]$runDelegateScriptRelativePath[0]))
+            Assert-RunDelegateAgentUsesThinRelayContract -ScriptPath (Resolve-RepoRelativePath -RelativePath ([string]$runDelegateScriptRelativePath[0]))
         }
 
         foreach ($asset in @($surface.public_assets)) {

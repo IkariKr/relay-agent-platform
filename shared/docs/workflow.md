@@ -1,31 +1,19 @@
-## Workflow
+## Thin Relay v2 Workflow
 
-1. Define the finish line.
-   - Restate the user goal, deliverable, success criteria, and constraints.
-   - Identify the relevant files, commands, and likely tests before delegating.
-   - Keep the implementation prompt narrow enough that the worker does not need to infer scope.
+1. Let Codex own the task.
+   - Codex main agent or a native Codex subagent owns decomposition, visible progress, review, verification, retries, and Git decisions.
+   - Use a native subagent for long-running work when you want the Codex UI to show progress and retain task context.
 
-2. Record the baseline.
-   - Run `git status --short` before delegation.
-   - Separate pre-existing dirty files from files expected to change.
-   - If the project is not a git worktree, continue without commit behavior and state that limitation.
+2. Select the worker explicitly.
+   - Use one of `opencode`, `claude`, or `antigravity`.
+   - Preserve an explicit model, agent, prompt, working directory, and native CLI parameters.
+   - Use `relay route` only when the caller deliberately asks for routing; `relay run` always uses a concrete backend.
 
-3. Delegate one bounded implementation attempt.
-   - Use the backend wrapper for exactly one prompt-driven execution cycle.
-   - Include the exact user goal, editable scope, constraints, verification commands, and an instruction not to commit.
-   - Prefer idle timeout over wall-clock timeout for larger edits.
+3. Run one native command.
+   - Use `scripts/run_relay.ps1 -Backend <backend> -Prompt <prompt>`.
+   - Add `-Model`, `-Agent`, and repeated `-PassThrough` values only when required.
+   - Relay prints the native command, forwards the backend's raw stdout/stderr, and returns its exit code.
 
-4. Inspect timeouts before retrying.
-   - Treat exit code `124` as total timeout and `125` as idle timeout.
-   - Inspect `git status --short` and `git diff` immediately after a stop.
-   - Retry only with a narrower correction prompt when the partial result is still useful.
-
-5. Review the changes yourself.
-   - Check for scope drift, unrelated edits, missing tests, broken interfaces, and unsafe behavior.
-   - Run the smallest meaningful verification commands that can prove the change.
-   - Treat the worker summary as advisory only.
-
-6. Commit only after review.
-   - Stage only reviewed files from the current delegation cycle.
-   - Do not stage unrelated pre-existing worktree changes.
-   - If a file was already dirty, isolate hunks carefully or stop and ask the user.
+4. Review outside Relay.
+   - Relay does not retry, time out, parse JSONL, manufacture progress, poll Git, run tests, stage, or commit.
+   - Codex reviews the result and decides whether to continue with a new, more precise task.

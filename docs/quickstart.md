@@ -1,171 +1,61 @@
-# Relay Quickstart
+# Relay v2 Quick Start
 
-## Fastest Path
+Relay v2 is a thin execution layer. Codex owns task planning, visible subagent progress, review, verification, and Git decisions. Relay only builds and runs one native CLI command.
 
-If you only want the recommended path:
+## Run a backend explicitly
 
-```powershell
-Set-Location .\packages\relay-agent
-.\scripts\run_delegate_agent.ps1 -Prompt "Review this API design and point out risks." -Backend auto -WhatIf
-```
-
-That uses the unified package, lets routing decide, and prints the backend decision without executing a real backend run.
-
-## Quickstart Scenarios
-
-### 1. Unified Agent With Auto Routing
+Use `scripts/run_relay.ps1` with a concrete backend:
 
 ```powershell
-Set-Location .\packages\relay-agent
-.\scripts\run_delegate_agent.ps1 -Prompt "Please review this architecture plan." -Backend auto -WhatIf
+./scripts/run_relay.ps1 `
+  -Backend opencode `
+  -Model opencode/deepseek-v4-flash-free `
+  -Agent build `
+  -PassThrough '--auto','--format','json' `
+  -Prompt 'Review this repository and report only actionable findings.'
 ```
 
-Use this when:
+Supported backends are `opencode`, `claude`, and `antigravity`. `-Model`, `-Agent`, and every `-PassThrough` token are passed to the native CLI without model ranking or intent inference.
 
-- you want the default platform experience
-- you want the package to choose Claude, OpenCode, or Antigravity based on routing config
-
-### 2. Unified Agent With Explicit Claude
+## Preview before spending tokens
 
 ```powershell
-Set-Location .\packages\relay-agent
-.\scripts\run_delegate_agent.ps1 -Prompt "Review this refactor plan in detail." -Backend claude -WhatIf
+./scripts/run_relay.ps1 -Backend claude -Model sonnet -Prompt 'Explain this file.' -DryRun
 ```
 
-Use this when:
+`-DryRun` only constructs and prints the native command. It does not check or launch the backend CLI.
 
-- you want Claude regardless of routing rules
-- you want the unified surface to route to Claude while keeping Claude-specific tuning in `.relay-agent/backends/claude.json`
+## Pass a native option
 
-### 3. Unified Agent With Explicit OpenCode
+Pass each token separately to avoid ambiguity with Relay parameters:
 
 ```powershell
-Set-Location .\packages\relay-agent
-.\scripts\run_delegate_agent.ps1 -Prompt "Make a quick fix in this small module." -Backend opencode -WhatIf
+./scripts/run_relay.ps1 -Backend opencode `
+  -PassThrough '--file','README.md','--auto' `
+  -Prompt 'Summarize the attached file.'
 ```
 
-Use this when:
+Relay inserts native options before the prompt separator. New native CLI features can be used immediately through `-PassThrough`.
 
-- you want OpenCode regardless of routing rules
-- you want direct local/provider-oriented execution through the unified surface while keeping OpenCode tuning in `.relay-agent/backends/opencode.json`
+## Use Codex subagents for long work
 
-### 4. Unified Agent With Explicit Antigravity
+For a long-running task, ask Codex to create a native subagent and have that subagent call Relay. The Codex UI then owns progress, interruption, context, review, and any deliberate follow-up. Relay does not enforce wall-clock or idle timeouts, retry calls, poll Git, parse JSONL, or manufacture progress.
+
+## Optional backend routing
+
+Routing is separate from `run`:
 
 ```powershell
-Set-Location .\packages\relay-agent
-.\scripts\run_delegate_agent.ps1 -Prompt "Use agy for this bounded coding task." -Backend antigravity -WhatIf
+./scripts/route_relay.ps1 -Action explain -Prompt 'Do a quick local code change.'
+./scripts/route_relay.ps1 -Action run -Prompt 'Do a quick local code change.'
 ```
 
-Use this when:
+Routing uses the readable rule table in `.relay-agent/routing.json` or the bundled default. It selects only a backend; it never replaces an explicit model or agent.
 
-- you want Antigravity regardless of routing rules
-- you want to validate the `agy` runner and backend-local config path through the unified surface
-
-### 5. Direct OpenCode Package
+## Optional raw logs
 
 ```powershell
-Set-Location .\packages\relay-opencode
-.\scripts\run_opencode_delegate.ps1 -Prompt "Implement a quick refactor." -WhatIf
+./scripts/run_relay.ps1 -Backend opencode -LogDir ./relay-logs -Prompt 'Run the task.'
 ```
 
-Use this when:
-
-- you want OpenCode only
-- you do not need the unified routing layer
-
-### 6. Direct Antigravity Package
-
-```powershell
-Set-Location .\packages\relay-antigravity
-.\scripts\run_antigravity_delegate.ps1 -Prompt "Implement a bounded coding change." -WhatIf
-```
-
-Use this when:
-
-- you want Antigravity only
-- you want direct `agy --print` behavior without the unified routing layer
-
-### 7. Inspect Current Routing Rules
-
-```powershell
-Set-Location .\packages\relay-agent
-.\scripts\manage_auto_routing.ps1 -Action list -Workdir .
-```
-
-Use this when:
-
-- you want to see the active routing config source
-- you want to inspect rule order, enable state, and condition summaries
-
-### 8. Explain Why A Prompt Routes A Certain Way
-
-```powershell
-Set-Location .\packages\relay-agent
-.\scripts\manage_auto_routing.ps1 -Action explain -Workdir . -Prompt "Need a quick fix for this minor bug."
-```
-
-Use this when:
-
-- you want to know which rule wins
-- you want to inspect the selected backend and routing reason before changing config
-
-### 9. Natural-Language Rule Inspection
-
-```powershell
-Set-Location .\packages\relay-agent
-.\scripts\manage_auto_routing_nl.ps1 -Request 'list current routing rules' -Workdir .
-```
-
-Use this when:
-
-- you want a softer entrypoint than the structured action-based script
-- you still want transparent output showing the translated command
-
-### 10. Natural-Language Rule Creation
-
-```powershell
-Set-Location .\packages\relay-agent
-.\scripts\manage_auto_routing_nl.ps1 -Request 'add rule: "quick-local", backend: opencode, reason: quick local routing, prompt keywords: quick, fix, minor' -Workdir . -Apply
-```
-
-Use this when:
-
-- you want to add a rule without hand-editing JSON
-- you are comfortable using labeled fields in a natural-language wrapper
-
-## What To Expect From `-WhatIf`
-
-On runtime entrypoints, `-WhatIf` prints:
-
-- selected backend
-- routing reason
-- selected config path when auto routing is used
-- backend-specific arguments that would be executed
-
-This is the recommended first-run mode because it lets you validate installation and routing without spending backend tokens or changing anything.
-
-## Backend-Local Config
-
-For unified-surface backend tuning, create backend-local config files such as:
-
-```text
-<workdir>\.relay-agent\backends\claude.json
-<workdir>\.relay-agent\backends\opencode.json
-<workdir>\.relay-agent\backends\antigravity.json
-```
-
-Use this for backend-specific settings like Claude output format, OpenCode model/provider choices, or Antigravity `agy` print settings. The unified runtime no longer exposes backend-specific top-level flags directly.
-
-## Recommended First-Day Workflow
-
-1. Run `run_delegate_agent.ps1` with `-WhatIf`.
-2. Run `manage_auto_routing.ps1 -Action list`.
-3. Run `manage_auto_routing.ps1 -Action explain` with a prompt that resembles your real usage.
-4. Only after that, run a real backend command without `-WhatIf`.
-
-## Where To Go Next
-
-- installation details: `docs/installation.md`
-- routing behavior and config: `docs/routing-guide.md`
-- package choice help: `docs/package-selection.md`
-- troubleshooting: `docs/troubleshooting.md`
+Use this only when you need local raw worker output in addition to the live terminal output.

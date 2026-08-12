@@ -1,4 +1,5 @@
 param(
+    [Parameter(Mandatory = $true)][ValidateSet("opencode", "claude", "antigravity")][string]$Backend,
     [Parameter(Mandatory = $true)][string]$Prompt,
     [string]$Workdir = (Get-Location).Path,
     [string]$Model = "",
@@ -10,5 +11,5 @@ param(
 
 $ErrorActionPreference = "Stop"
 Import-Module (Join-Path $PSScriptRoot "..\shared\scripts\ThinRelay.psm1") -Force
-Invoke-ThinRelay -Backend claude -Prompt $Prompt -Workdir $Workdir -Model $Model -Agent $Agent -PassThrough $PassThrough -LogDir $LogDir -DryRun:$DryRun
+Invoke-ThinRelay @PSBoundParameters
 exit (Get-ThinRelayLastExitCode)
