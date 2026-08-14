@@ -94,7 +94,70 @@ Describe "relay doctor" {
 }
 
 Describe "relay route" {
-    It "is not implemented until Phase 2" {
-        { & $script:relayScript route -- "p" } | Should -Throw "*Phase 2*"
+    BeforeAll {
+        $script:routingConfig = Join-Path (Split-Path -Parent $script:workdir) "routing.json"
+        @{
+            version = 2
+            defaults = @{
+                preferred_backend = "claude"
+                fallback_backends = @("opencode")
+                on_no_match = "preferred_backend"
+            }
+            rules = @(
+                @{
+                    name = "read-only"
+                    backend = "opencode"
+                    reason = "read-only review"
+                    enabled = $true
+                    when = @{ prompt_any_regex = @(".*read.*") }
+                }
+            )
+        } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $script:routingConfig -Encoding utf8
+    }
+    It "explain selects the matching rule backend and prints the native command without executing" {
+        $out = (& $script:relayScript route explain --auto-config-path $script:routingConfig --workdir $script:workdir -- "read this file" 6>&1 | Out-String)
+        $LASTEXITCODE | Should -Be 0
+        $out | Should -Match "selected backend: opencode"
+        $out | Should -Match "routing rule: read-only"
+        $out | Should -Match "native command: opencode run"
+    }
+    It "explain falls back to the preferred backend when no rule matches" {
+        $out = (& $script:relayScript route explain --auto-config-path $script:routingConfig --workdir $script:workdir -- "implement a feature" 6>&1 | Out-String)
+        $out | Should -Match "selected backend: claude"
+        $out | Should -Match "preferred backend"
+    }
+    It "run executes the routed backend and propagates its exit code" {
+        $env:STUB_EXIT_CODE = "3"
+        try {
+            & $script:relayScript route run --auto-config-path $script:routingConfig --workdir $script:workdir -- "read this file" | Out-Null
+            $LASTEXITCODE | Should -Be 3
+        }
+        finally {
+            Remove-Item Env:\STUB_EXIT_CODE -ErrorAction SilentlyContinue
+        }
+    }
+    It "only selects registered external-cli backends (TR-ROUTE-001)" {
+        $badConfig = Join-Path (Split-Path -Parent $script:workdir) "routing-bad.json"
+        @{
+            version = 2
+            defaults = @{
+                preferred_backend = "claude"
+                fallback_backends = @("opencode")
+                on_no_match = "preferred_backend"
+            }
+            rules = @(
+                @{
+                    name = "native"
+                    backend = "deepseek-v4-flash"
+                    when = @{ prompt_any_regex = @(".*") }
+                }
+            )
+        } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $badConfig -Encoding utf8
+        try {
+            { & $script:relayScript route explain --auto-config-path $badConfig --workdir $script:workdir -- "anything" } | Should -Throw
+        }
+        finally {
+            Remove-Item -LiteralPath $badConfig -Force -ErrorAction SilentlyContinue
+        }
     }
 }

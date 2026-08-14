@@ -51,11 +51,22 @@ if ($args.Count -gt 1) {
     $rest = @($slice)
 }
 
+# route 子命令的第一个非选项 token 是动作（explain | run）。
+# For 'route', the first non-option token is the action (explain | run).
+$routeAction = ""
+if ($command -eq "route" -and $rest.Count -gt 0 -and $rest[0] -in @("explain", "run")) {
+    $routeAction = $rest[0]
+    $remaining = New-Object System.Collections.Generic.List[string]
+    for ($r = 1; $r -lt $rest.Count; $r++) { $remaining.Add([string]$rest[$r]) }
+    $rest = @($remaining)
+}
+
 $backend = ""
 $model = ""
 $agent = ""
 $workdir = (Get-Location).Path
 $logDir = ""
+$autoConfigPath = ""
 $dryRun = $false
 $passThrough = New-Object System.Collections.Generic.List[string]
 $prompt = ""
@@ -78,6 +89,7 @@ $i = 0
         "^(--agent|-a)$" { $agent = Get-RelayOptionValue -Tokens $rest -Index ([ref]$i) -Flag $token }
         "^(--workdir|-w)$" { $workdir = Get-RelayOptionValue -Tokens $rest -Index ([ref]$i) -Flag $token }
         "^(--log-dir)$" { $logDir = Get-RelayOptionValue -Tokens $rest -Index ([ref]$i) -Flag $token }
+        "^(--auto-config-path)$" { $autoConfigPath = Get-RelayOptionValue -Tokens $rest -Index ([ref]$i) -Flag $token }
         "^--dry-run$" { $dryRun = $true }
         "^(--passthrough)$" {
             $i = $i + 1
@@ -135,6 +147,42 @@ switch ($command) {
         exit 0
     }
     "route" {
-        throw "relay: 'route' is not implemented yet (planned for Thin Relay v2 SOP Phase 2)"
+        # 自动路由只在外部 CLI backend 集合内选择（Assert-RegisteredRoutingBackend 保证）；
+        # native-provider 的 worker 选择由 Worker Dispatch 负责，relay route 无权选择或伪装。
+        # Auto-routing only selects from registered external-cli backends; native-provider
+        # selection belongs to Worker Dispatch, never to relay route.
+        if (-not $routeAction) {
+            throw "relay: 'route' requires an action: explain | run"
+        }
+        if ($routeAction -notin @("explain", "run")) {
+            throw "relay: unknown route action '$routeAction' (supported: explain, run)"
+        }
+        if ([string]::IsNullOrWhiteSpace($prompt)) {
+            throw "relay: a prompt is required after '--'"
+        }
+
+        $routingModule = Join-Path $PSScriptRoot "..\backends\agent\AutoRoutingCommon.psm1"
+        if (-not (Test-Path -LiteralPath $routingModule)) {
+            $routingModule = Join-Path $PSScriptRoot "AutoRoutingCommon.psm1"
+        }
+        Import-Module $routingModule -Force
+
+        $packageRoot = Split-Path -Parent $PSScriptRoot
+        $resolvedWorkdir = (Resolve-Path -LiteralPath $workdir).Path
+        $config = Load-AutoRoutingConfig -AutoConfigPath $autoConfigPath -PackageRoot $packageRoot -Workdir $resolvedWorkdir
+        $resolution = Resolve-AutoConfiguredBackend -RoutingConfig $config -Prompt $prompt -Workdir $resolvedWorkdir -BackendAvailability (Get-RoutingBackendAvailabilityMap)
+        $invocation = New-ThinRelayInvocation -Backend $resolution.Backend -Prompt $prompt -Workdir $resolvedWorkdir -Model $model -Agent $agent -PassThrough @($passThrough)
+
+        Write-Host "routing config: $($resolution.ConfigPath)"
+        Write-Host "selected backend: $($resolution.Backend)"
+        Write-Host "routing reason: $($resolution.Reason)"
+        if (-not [string]::IsNullOrWhiteSpace($resolution.Rule)) { Write-Host "routing rule: $($resolution.Rule)" }
+        Write-Host "native command: $($invocation.DisplayCommand)"
+
+        if ($routeAction -eq "run") {
+            Invoke-ThinRelay -Backend $resolution.Backend -Prompt $prompt -Workdir $resolvedWorkdir -Model $model -Agent $agent -PassThrough @($passThrough) -LogDir $logDir
+            exit (Get-ThinRelayLastExitCode)
+        }
+        exit 0
     }
 }

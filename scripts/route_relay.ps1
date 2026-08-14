@@ -9,23 +9,21 @@ param(
     [string]$LogDir = ""
 )
 
+# 兼容入口：转调 canonical scripts/relay.ps1 route；本脚本不再自行实现路由逻辑。
+# Compatibility entrypoint: delegates to canonical scripts/relay.ps1 route;
+# it no longer implements routing logic itself.
 $ErrorActionPreference = "Stop"
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-Import-Module (Join-Path $repoRoot "backends\agent\AutoRoutingCommon.psm1") -Force
-Import-Module (Join-Path $repoRoot "shared\scripts\ThinRelay.psm1") -Force
+$relayScript = Join-Path $PSScriptRoot "relay.ps1"
 
-$resolvedWorkdir = (Resolve-Path -LiteralPath $Workdir).Path
-$config = Load-AutoRoutingConfig -AutoConfigPath $AutoConfigPath -PackageRoot $repoRoot.Path -Workdir $resolvedWorkdir
-$resolution = Resolve-AutoConfiguredBackend -RoutingConfig $config -Prompt $Prompt -Workdir $resolvedWorkdir -BackendAvailability (Get-RoutingBackendAvailabilityMap)
-$invocation = New-ThinRelayInvocation -Backend $resolution.Backend -Prompt $Prompt -Workdir $resolvedWorkdir -Model $Model -Agent $Agent -PassThrough $PassThrough
+$relayArgs = @("route", $Action)
+if ($Workdir) { $relayArgs += "--workdir"; $relayArgs += $Workdir }
+if ($Model) { $relayArgs += "--model"; $relayArgs += $Model }
+if ($Agent) { $relayArgs += "--agent"; $relayArgs += $Agent }
+if ($AutoConfigPath) { $relayArgs += "--auto-config-path"; $relayArgs += $AutoConfigPath }
+if ($LogDir) { $relayArgs += "--log-dir"; $relayArgs += $LogDir }
+foreach ($item in $PassThrough) { $relayArgs += "--passthrough"; $relayArgs += $item }
+$relayArgs += "--"
+$relayArgs += $Prompt
 
-Write-Host "routing config: $($resolution.ConfigPath)"
-Write-Host "selected backend: $($resolution.Backend)"
-Write-Host "routing reason: $($resolution.Reason)"
-if (-not [string]::IsNullOrWhiteSpace($resolution.Rule)) { Write-Host "routing rule: $($resolution.Rule)" }
-Write-Host "native command: $($invocation.DisplayCommand)"
-
-if ($Action -eq "run") {
-    Invoke-ThinRelay -Backend $resolution.Backend -Prompt $Prompt -Workdir $resolvedWorkdir -Model $Model -Agent $Agent -PassThrough $PassThrough -LogDir $LogDir
-    exit (Get-ThinRelayLastExitCode)
-}
+& $relayScript @relayArgs
+exit $LASTEXITCODE
