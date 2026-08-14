@@ -1,0 +1,52 @@
+{
+  "id": "deepseek-v4-flash",
+  "display_name": "DeepSeek V4 Flash",
+  "runtime_type": "native-provider",
+  "purpose": "read-only research and analysis delegation via a Codex native child",
+  "host_requirements": {
+    "codex_multi_agent": true,
+    "custom_provider_load": true
+  },
+  "data_boundary": {
+    "execution_boundary": "codex-native-child",
+    "egress": "external-transmit",
+    "sensitive_auto_dispatch": "deny-unless-explicitly-classified"
+  },
+  "permissions": {
+    "sandbox_mode": "read-only",
+    "write": false
+  },
+  "install_contract": {
+    "kind": "pack-owned-file-staging",
+    "agent_role": "deepseek-v4-flash",
+    "config_file": "agent.toml",
+    "owned_paths": [
+      "agents/relay/deepseek-v4-flash.toml"
+    ],
+    "note": "config.toml role registration requires verified Codex config format; staged in B2 spike"
+  },
+  "health_check": {
+    "kind": "config-parse",
+    "checks": [
+      "agent.toml parses as TOML",
+      "credential env var present (value never read)"
+    ]
+  },
+  "smoke_test": {
+    "kind": "paid",
+    "required": true
+  },
+  "uninstall_contract": {
+    "kind": "pack-owned-only",
+    "owned_paths": [
+      "agents/relay/deepseek-v4-flash.toml"
+    ]
+  },
+  "provider": {
+    "provider_id": "deepseek",
+    "model_id": "<provider-model-id>",
+    "wire_api": "responses",
+    "credential_source": "env:DEEPSEEK_API_KEY",
+    "default_sandbox": "read-only"
+  }
+}
