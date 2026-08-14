@@ -2,6 +2,15 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $script:ThinRelayLastExitCode = 0
 
+# 展示/落盘命令时视为 secret 值的标志名；后随的单个 token 一并脱敏。
+# Secret value flags; the single following token is redacted together with the flag.
+$script:ThinRelaySecretValueFlags = @(
+    "--api-key", "--api_key", "--apikey",
+    "--token", "--access-token",
+    "--secret", "--client-secret",
+    "--password", "--passwd"
+)
+
 function Get-ThinRelayCommand {
     param([Parameter(Mandatory = $true)][string]$Backend)
 
@@ -28,14 +37,51 @@ function Resolve-ThinRelayCommand {
 function ConvertTo-ThinRelayDisplayArgument {
     param([Parameter(Mandatory = $true)][string]$Value)
 
-    if ($Value -match '(?i)(api[_-]?key|token|secret|password)=') {
-        return "<redacted>"
-    }
     if ($Value -match '[\s"'']') {
         return '"' + ($Value -replace '"', '\"') + '"'
     }
 
     return $Value
+}
+
+function ConvertTo-ThinRelayDisplayCommand {
+    param(
+        [Parameter(Mandatory = $true)][string]$Command,
+        [Parameter(Mandatory = $true)][string[]]$Arguments
+    )
+
+    # token-aware 脱敏：secret 值标志连后随值一起脱敏；内联 key=value 保留键名只脱敏值；
+    # Authorization/Bearer 形态整体脱敏。不得只识别 key=value 形式。
+    # Token-aware redaction: secret value flags redact the following value; inline
+    # key=value keeps the key and redacts the value; Authorization/Bearer forms are
+    # redacted wholesale. Must not only recognize key=value form.
+    $tokens = New-Object System.Collections.Generic.List[string]
+    $tokens.Add($Command)
+    $redactNext = $false
+    foreach ($arg in $Arguments) {
+        if ($redactNext) {
+            $tokens.Add("<redacted>")
+            $redactNext = $false
+            continue
+        }
+        if ($script:ThinRelaySecretValueFlags -contains $arg) {
+            $tokens.Add($arg)
+            $redactNext = $true
+            continue
+        }
+        if ($arg -match '(?i)(api[_-]?key|token|secret|password)=(.+)$') {
+            $tokens.Add(($arg -replace '(?i)^(.+(?:api[_-]?key|token|secret|password)=).+$', '${1}<redacted>'))
+            continue
+        }
+        if ($arg -match '(?i)^(authorization|proxy-authorization)(\s*[:=]|$)' -or $arg -match '(?i)\bbearer\s+[A-Za-z0-9._~+/=-]+') {
+            $tokens.Add("<redacted>")
+            continue
+        }
+        $tokens.Add((ConvertTo-ThinRelayDisplayArgument -Value $arg))
+    }
+    if ($redactNext) { $tokens.Add("<redacted>") }
+
+    return ($tokens -join " ")
 }
 
 function Get-ThinRelayDefaultConfig {
@@ -106,7 +152,26 @@ function New-ThinRelayInvocation {
         Backend = $Backend
         Command = $command
         Arguments = @($arguments)
-        DisplayCommand = ((@($command) + @($arguments | ForEach-Object { ConvertTo-ThinRelayDisplayArgument -Value $_ })) -join " ")
+        DisplayCommand = (ConvertTo-ThinRelayDisplayCommand -Command $command -Arguments @($arguments))
+    }
+}
+
+function Get-ThinRelayStreamReader {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    # Start-Process 创建重定向文件与返回之间可能有极小竞态，短暂重试。
+    # There can be a tiny race between Start-Process creating the redirect file and
+    # this reader opening it; retry briefly.
+    $deadline = (Get-Date).AddSeconds(5)
+    while ($true) {
+        try {
+            $file = [System.IO.FileStream]::new($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+            return [System.IO.StreamReader]::new($file, [System.Text.Encoding]::UTF8, $true, 4096)
+        }
+        catch [System.IO.FileNotFoundException] {
+            if ((Get-Date) -gt $deadline) { throw }
+            Start-Sleep -Milliseconds 50
+        }
     }
 }
 
@@ -159,11 +224,32 @@ function Invoke-ThinRelay {
     $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
     $stdoutPath = Join-Path $LogDir "$Backend-$stamp.stdout.log"
     $stderrPath = Join-Path $LogDir "$Backend-$stamp.stderr.log"
-    $process = Start-Process -FilePath $invocation.Command -ArgumentList @($invocation.Arguments) -WorkingDirectory $resolvedWorkdir -Wait -PassThru -NoNewWindow -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
-    Get-Content -LiteralPath $stdoutPath | Write-Output
-    Get-Content -LiteralPath $stderrPath | Write-Error
+    $commandPath = Join-Path $LogDir "$Backend-$stamp.command.txt"
+    [System.IO.File]::WriteAllText($commandPath, $invocation.DisplayCommand + "`n")
+
+    # 边运行边增量读取重定向文件，实时转发；禁止等进程结束后再回放。
+    # Incrementally read the redirected files while the child runs; never replay after exit.
+    $process = Start-Process -FilePath $invocation.Command -ArgumentList @($invocation.Arguments) -WorkingDirectory $resolvedWorkdir -PassThru -NoNewWindow -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+    $stdoutReader = $null
+    $stderrReader = $null
+    try {
+        $stdoutReader = Get-ThinRelayStreamReader -Path $stdoutPath
+        $stderrReader = Get-ThinRelayStreamReader -Path $stderrPath
+        while (-not $process.HasExited) {
+            while ($null -ne ($line = $stdoutReader.ReadLine())) { Write-Output $line }
+            while ($null -ne ($line = $stderrReader.ReadLine())) { [Console]::Error.WriteLine($line) }
+            Start-Sleep -Milliseconds 50
+        }
+        while ($null -ne ($line = $stdoutReader.ReadLine())) { Write-Output $line }
+        while ($null -ne ($line = $stderrReader.ReadLine())) { [Console]::Error.WriteLine($line) }
+    }
+    finally {
+        if ($null -ne $stdoutReader) { $stdoutReader.Dispose() }
+        if ($null -ne $stderrReader) { $stderrReader.Dispose() }
+    }
     Write-Host "stdout log: $stdoutPath"
     Write-Host "stderr log: $stderrPath"
+    Write-Host "command log: $commandPath"
     $script:ThinRelayLastExitCode = $process.ExitCode
 }
 
