@@ -1,0 +1,43 @@
+{
+  "id": "native-fixture",
+  "display_name": "Synthetic Native-Provider Fixture",
+  "runtime_type": "native-provider",
+  "purpose": "test-only synthetic native provider worker for registry validation",
+  "host_requirements": {
+    "codex_multi_agent": true,
+    "custom_provider_load": true
+  },
+  "data_boundary": {
+    "execution_boundary": "codex-native-child",
+    "egress": "external-transmit",
+    "sensitive_auto_dispatch": "deny-unless-explicitly-classified"
+  },
+  "permissions": {
+    "sandbox_mode": "read-only",
+    "write": false
+  },
+  "install_contract": {
+    "kind": "agent-role-registration",
+    "agent_role": "native-fixture",
+    "config_file": "native-fixture.toml",
+    "owned_paths": []
+  },
+  "health_check": {
+    "kind": "config-parse"
+  },
+  "smoke_test": {
+    "kind": "paid",
+    "required": true
+  },
+  "uninstall_contract": {
+    "kind": "pack-owned-only",
+    "owned_paths": []
+  },
+  "provider": {
+    "provider_id": "fixture-provider",
+    "model_id": "fixture-model",
+    "wire_api": "responses",
+    "credential_source": "env:FIXTURE_API_KEY",
+    "default_sandbox": "read-only"
+  }
+}
