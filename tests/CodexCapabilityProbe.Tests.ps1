@@ -51,6 +51,31 @@ Describe "Doctor: available vs blocking capabilities" {
     }
 }
 
+Describe "live verification evidence flips demonstrated capabilities to supported" {
+    It "custom_agent_spawn / native_wait_callback / native_cancel / plaintext are supported when B4 evidence exists" {
+        $evidenceDir = Join-Path ([System.IO.Path]::GetTempPath()) ("relay-evidence-" + [guid]::NewGuid().ToString("N"))
+        New-Item -ItemType Directory -Path $evidenceDir -Force | Out-Null
+        try {
+            # 最小 live evidence 占位（结构上匹配 b4-native-child-*.jsonl 命名）
+            '{"type":"turn.started"}' | Set-Content -LiteralPath (Join-Path $evidenceDir "b4-native-child-20260814.jsonl") -Encoding utf8
+            $result = Get-CodexCapabilityProbeResult -LiveEvidenceDir $evidenceDir
+            $result.capabilities.custom_agent_spawn.status | Should -Be "supported"
+            $result.capabilities.native_wait_callback.status | Should -Be "supported"
+            $result.capabilities.native_cancel.status | Should -Be "supported"
+            $result.capabilities.plaintext_initial_message.status | Should -Be "supported"
+            $result.capabilities.custom_agent_spawn.evidence | Should -Not -BeNullOrEmpty
+        }
+        finally {
+            Remove-Item -LiteralPath $evidenceDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+    It "without live evidence the same capabilities stay unknown (fail-closed offline)" {
+        $result = Get-CodexCapabilityProbeResult -LiveEvidenceDir (Join-Path ([System.IO.Path]::GetTempPath()) "relay-no-evidence-nowhere")
+        $result.capabilities.custom_agent_spawn.status | Should -Be "unknown"
+        $result.capabilities.native_cancel.status | Should -Be "unknown"
+    }
+}
+
 Describe "Invoke-CapabilityProbe writes a schema-shaped evidence artifact" {
     It "persists probe JSON with version, host, codex and fail-closed capabilities" {
         $out = Join-Path ([System.IO.Path]::GetTempPath()) ("relay-evidence-" + [guid]::NewGuid().ToString("N") + ".json")

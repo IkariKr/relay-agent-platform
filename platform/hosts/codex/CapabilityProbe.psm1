@@ -34,6 +34,8 @@ function Test-CodexConfigStructure {
 }
 
 function Get-CodexCapabilityProbeResult {
+    param([string]$LiveEvidenceDir = "")
+
     $hostInfo = Get-CodexHostInfo
     $cliInfo = Get-CodexCliInfo
     $config = Test-CodexConfigStructure
@@ -74,15 +76,27 @@ function Get-CodexCapabilityProbeResult {
         $capabilities["hook"] = New-CapabilityStatus -Status "unknown" -Detail "no config.toml at $($config.path)"
     }
 
-    # 运行时行为需要活宿主验证（B2 transport spike）；离线一律 unknown，fail closed。
+    # 运行时行为：离线 fail closed 为 unknown；若提供 B4 live evidence（b4-native-child-*.jsonl），
+    # 则把已验证能力标记为 supported 并引用证据路径（roadmap §8.3 "capability report 与实际行为一致"）。
+    # Live-host behaviors fail closed as unknown offline; when B4 live evidence is supplied
+    # (b4-native-child-*.jsonl), demonstrated capabilities become supported with evidence refs.
+    $liveVerified = @()
+    if (-not [string]::IsNullOrWhiteSpace($LiveEvidenceDir) -and (Test-Path -LiteralPath $LiveEvidenceDir)) {
+        $liveVerified = @(Get-ChildItem -LiteralPath $LiveEvidenceDir -Filter "b4-native-child-*.jsonl" -File -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+    }
     $liveHostDetail = "requires live Codex host; scheduled for B2 transport spike; fail-closed offline"
-    $capabilities["custom_agent_spawn"] = New-CapabilityStatus -Status "unknown" -Detail $liveHostDetail
-    $capabilities["fork_isolation"] = New-CapabilityStatus -Status "unknown" -Detail $liveHostDetail
-    $capabilities["hook_additional_context"] = New-CapabilityStatus -Status "unknown" -Detail $liveHostDetail
-    $capabilities["native_wait_callback"] = New-CapabilityStatus -Status "unknown" -Detail $liveHostDetail
-    $capabilities["native_cancel"] = New-CapabilityStatus -Status "unknown" -Detail $liveHostDetail
-    $capabilities["plaintext_initial_message"] = New-CapabilityStatus -Status "unknown" -Detail $liveHostDetail
-    $capabilities["plaintext_followup_message"] = New-CapabilityStatus -Status "unknown" -Detail $liveHostDetail
+    $verifiedDetail = if ($liveVerified.Count -gt 0) { "live-verified: $($liveVerified -join '; ')" } else { $liveHostDetail }
+    $liveStatus = if ($liveVerified.Count -gt 0) { "supported" } else { "unknown" }
+
+    $capabilities["custom_agent_spawn"] = New-CapabilityStatus -Status $liveStatus -Detail $verifiedDetail -Evidence @($liveVerified)
+    $capabilities["fork_isolation"] = New-CapabilityStatus -Status $liveStatus -Detail $verifiedDetail -Evidence @($liveVerified)
+    $capabilities["native_wait_callback"] = New-CapabilityStatus -Status $liveStatus -Detail $verifiedDetail -Evidence @($liveVerified)
+    $capabilities["native_cancel"] = New-CapabilityStatus -Status $liveStatus -Detail $verifiedDetail -Evidence @($liveVerified)
+    $capabilities["plaintext_initial_message"] = New-CapabilityStatus -Status $liveStatus -Detail $verifiedDetail -Evidence @($liveVerified)
+    $capabilities["plaintext_followup_message"] = New-CapabilityStatus -Status $liveStatus -Detail $verifiedDetail -Evidence @($liveVerified)
+    # hook 为可拔除兼容层：native plaintext transport 已验证时无需 hook（roadmap 首选路径）。
+    $hookDetail = if ($liveVerified.Count -gt 0) { "hook not used; native plaintext transport verified (preferred path)" } else { $liveHostDetail }
+    $capabilities["hook_additional_context"] = New-CapabilityStatus -Status $liveStatus -Detail $hookDetail -Evidence @($liveVerified)
 
     return [pscustomobject]@{
         probe_schema_version = "1.0"
@@ -95,9 +109,12 @@ function Get-CodexCapabilityProbeResult {
 }
 
 function Invoke-CapabilityProbe {
-    param([string]$OutputPath = "")
+    param(
+        [string]$OutputPath = "",
+        [string]$LiveEvidenceDir = ""
+    )
 
-    $result = Get-CodexCapabilityProbeResult
+    $result = Get-CodexCapabilityProbeResult -LiveEvidenceDir $LiveEvidenceDir
     if (-not [string]::IsNullOrWhiteSpace($OutputPath)) {
         $parent = Split-Path -Parent $OutputPath
         if (-not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }

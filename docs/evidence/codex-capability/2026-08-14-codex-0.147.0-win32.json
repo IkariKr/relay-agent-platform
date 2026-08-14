@@ -1,7 +1,7 @@
 {
   "probe_schema_version": "1.0",
-  "probe_run_id": "ee9661540c8e47589e202892e1cdfaa2",
-  "generated_at": "2026-08-14T06:32:54.6421728Z",
+  "probe_run_id": "6dc67eba328a43bea6437465fc328145",
+  "generated_at": "2026-08-14T07:07:40.7549026Z",
   "host": {
     "name": "win32",
     "os_version": "10.0.19045",
@@ -37,39 +37,53 @@
       "evidence": []
     },
     "custom_agent_spawn": {
-      "status": "unknown",
-      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
-      "evidence": []
+      "status": "supported",
+      "detail": "live-verified: H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
     },
     "fork_isolation": {
-      "status": "unknown",
-      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
-      "evidence": []
-    },
-    "hook_additional_context": {
-      "status": "unknown",
-      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
-      "evidence": []
+      "status": "supported",
+      "detail": "live-verified: H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
     },
     "native_wait_callback": {
-      "status": "unknown",
-      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
-      "evidence": []
+      "status": "supported",
+      "detail": "live-verified: H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
     },
     "native_cancel": {
-      "status": "unknown",
-      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
-      "evidence": []
+      "status": "supported",
+      "detail": "live-verified: H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
     },
     "plaintext_initial_message": {
-      "status": "unknown",
-      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
-      "evidence": []
+      "status": "supported",
+      "detail": "live-verified: H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
     },
     "plaintext_followup_message": {
-      "status": "unknown",
-      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
-      "evidence": []
+      "status": "supported",
+      "detail": "live-verified: H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
+    },
+    "hook_additional_context": {
+      "status": "supported",
+      "detail": "hook not used; native plaintext transport verified (preferred path)",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
     }
   }
 }

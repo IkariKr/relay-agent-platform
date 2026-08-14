@@ -97,9 +97,9 @@
 
 - external-cli Backend Registry / Surface 架构已存在，canonical 入口 `scripts/relay.ps1 run` 已可用（`scripts/run_relay.ps1` 为兼容入口）；
 - Thin Relay v2 Phase 0 已收口：`--log-dir` 实时 mirror、token-aware redaction、进程级契约测试均已落地并有测试证据；
-- Worker Runtime Registry（A1）、CodeX host / Codex capability probe（A2）、DeepSeek pack + preflight（B1）、Dispatch Policy（C）、第二 provider 零核心特判（D）、host adapter（E）均已落地（81 项确定性测试）；
-- B2 原生 plaintext transport spike **已延期**：需要活 Codex 宿主 + 用户显式授权的第三方付费调用，证据/ADR 见 `docs/evidence/transport/b2-spike-2026-08-14.md`；B3 未进入；
-- DeepSeek 等第三方 `native-provider` 目前仍是计划能力，**尚不能称为 supported native child**（B4 paid smoke 未通过前保持该声明门槛）；
+- Worker Runtime Registry（A1）、CodeX host / Codex capability probe（A2）、DeepSeek pack + preflight（B1）、Dispatch Policy（C）、第二 provider 零核心特判（D）、host adapter（E）均已落地（89 项确定性测试）；
+- **B2 已完成**：codex-cli 0.147.0 原生 plaintext transport 验证通过——marker 经 native child 往返，`spawn_agent` / `wait` / `send_input` / `close_agent`（原生 cancel）全部可用，**无需 Hook**（roadmap 首选路径）；B3 未进入；
+- **B4 paid native smoke 已通过**（仅限已验证组合）：codex-cli 0.147.0 + `custom`（`nexus.ikarikore.top/v1`，wire_api=responses）+ `deepseek-v4-flash-response` + `[agents.deepseek-v4-flash]` 注册。按 roadmap §8.1/§9 语言规则，**该组合下 DeepSeek 可称 supported Codex native child**（证据：`docs/evidence/transport/b4-native-child-2026-08-14.md` 及 jsonl）；其他版本/模型/宿主必须各自重跑验收，不得自动外推；
 - 示例已切换到 canonical `relay run`；`run_relay.ps1` 作为兼容入口保留，按 SOP Phase 3 弃用。
 
 能力声明门槛见 [CodeX Native Subagent 优先路线图](docs/codex-native-subagent-roadmap.md#81-phase--release--claim-gate)，跨阶段测试索引见 [测试矩阵](docs/test-matrix.md)。
