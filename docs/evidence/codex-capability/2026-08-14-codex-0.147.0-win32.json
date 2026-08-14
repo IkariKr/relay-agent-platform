@@ -1,0 +1,75 @@
+{
+  "probe_schema_version": "1.0",
+  "probe_run_id": "ee9661540c8e47589e202892e1cdfaa2",
+  "generated_at": "2026-08-14T06:32:54.6421728Z",
+  "host": {
+    "name": "win32",
+    "os_version": "10.0.19045",
+    "pwsh_version": "7.6.4"
+  },
+  "codex": {
+    "cli_version": "0.147.0",
+    "cli_source": "C:\\Users\\ckr2577\\AppData\\Roaming\\npm\\codex.ps1"
+  },
+  "capabilities": {
+    "host_identity": {
+      "status": "supported",
+      "detail": "codex cli 0.147.0 on PATH",
+      "evidence": [
+        "C:\\Users\\ckr2577\\AppData\\Roaming\\npm\\codex.ps1"
+      ]
+    },
+    "custom_agent_discovery": {
+      "status": "unknown",
+      "detail": "config.toml present: agents=False model_providers=True hooks=False; [agents] section absent (Codex may still support agent discovery)",
+      "evidence": []
+    },
+    "custom_provider_load": {
+      "status": "supported",
+      "detail": "config.toml present: agents=False model_providers=True hooks=False",
+      "evidence": [
+        "C:\\Users\\ckr2577\\.codex\\config.toml"
+      ]
+    },
+    "hook": {
+      "status": "unknown",
+      "detail": "config.toml present: agents=False model_providers=True hooks=False; [hooks] section absent (Codex may still support hooks)",
+      "evidence": []
+    },
+    "custom_agent_spawn": {
+      "status": "unknown",
+      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
+      "evidence": []
+    },
+    "fork_isolation": {
+      "status": "unknown",
+      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
+      "evidence": []
+    },
+    "hook_additional_context": {
+      "status": "unknown",
+      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
+      "evidence": []
+    },
+    "native_wait_callback": {
+      "status": "unknown",
+      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
+      "evidence": []
+    },
+    "native_cancel": {
+      "status": "unknown",
+      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
+      "evidence": []
+    },
+    "plaintext_initial_message": {
+      "status": "unknown",
+      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
+      "evidence": []
+    },
+    "plaintext_followup_message": {
+      "status": "unknown",
+      "detail": "requires live Codex host; scheduled for B2 transport spike; fail-closed offline",
+      "evidence": []
+    }
+  }
+}
