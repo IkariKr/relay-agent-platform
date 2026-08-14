@@ -4,38 +4,40 @@ Relay v2 is a thin execution layer. Codex owns task planning, visible subagent p
 
 ## Run a backend explicitly
 
-Use `scripts/run_relay.ps1` with a concrete backend:
+Use `scripts/relay.ps1 run` with a concrete backend:
 
 ```powershell
-./scripts/run_relay.ps1 `
-  -Backend opencode `
-  -Model opencode/deepseek-v4-flash-free `
-  -Agent build `
-  -PassThrough '--auto','--format','json' `
-  -Prompt 'Review this repository and report only actionable findings.'
+./scripts/relay.ps1 run `
+  --backend opencode `
+  --model opencode/deepseek-v4-flash-free `
+  --agent build `
+  --passthrough --auto --passthrough --format --passthrough json `
+  -- "Review this repository and report only actionable findings."
 ```
 
-Supported backends are `opencode`, `claude`, and `antigravity`. `-Model`, `-Agent`, and every `-PassThrough` token are passed to the native CLI without model ranking or intent inference.
+Supported backends are `opencode`, `claude`, and `antigravity`. `--model`, `--agent`, and every `--passthrough` token are passed to the native CLI without model ranking or intent inference.
+
+> 兼容入口：`scripts/run_relay.ps1` 在弃用窗口内继续可用，但会打印迁移提示并转调同一 core。Compatibility note: `scripts/run_relay.ps1` still works during the deprecation window but prints a migration notice and delegates to the same core.
 
 ## Preview before spending tokens
 
 ```powershell
-./scripts/run_relay.ps1 -Backend claude -Model sonnet -Prompt 'Explain this file.' -DryRun
+./scripts/relay.ps1 run --backend claude --model sonnet --dry-run -- "Explain this file."
 ```
 
-`-DryRun` only constructs and prints the native command. It does not check or launch the backend CLI.
+`--dry-run` only constructs and prints the native command. It does not check or launch the backend CLI.
 
 ## Pass a native option
 
-Pass each token separately to avoid ambiguity with Relay parameters:
+Pass each token separately through `--passthrough` to avoid ambiguity with Relay parameters:
 
 ```powershell
-./scripts/run_relay.ps1 -Backend opencode `
-  -PassThrough '--file','README.md','--auto' `
-  -Prompt 'Summarize the attached file.'
+./scripts/relay.ps1 run --backend opencode `
+  --passthrough --file --passthrough README.md --passthrough --auto `
+  -- "Summarize the attached file."
 ```
 
-Relay inserts native options before the prompt separator. New native CLI features can be used immediately through `-PassThrough`.
+Relay inserts native options before the prompt separator. New native CLI features can be used immediately through `--passthrough`.
 
 ## Use Codex subagents for long work
 
@@ -46,16 +48,16 @@ For a long-running task, ask Codex to create a native subagent and have that sub
 Routing is separate from `run`:
 
 ```powershell
-./scripts/route_relay.ps1 -Action explain -Prompt 'Do a quick local code change.'
-./scripts/route_relay.ps1 -Action run -Prompt 'Do a quick local code change.'
+./scripts/relay.ps1 route explain -- "Do a quick local code change."
+./scripts/relay.ps1 route run -- "Do a quick local code change."
 ```
 
-Routing uses the readable rule table in `.relay-agent/routing.json` or the bundled default. It selects only a backend; it never replaces an explicit model or agent.
+Routing uses the readable rule table in `.relay-agent/routing.json` or the bundled default. It selects only a backend; it never replaces an explicit model or agent, and it never selects a native-provider worker.
 
 ## Optional raw logs
 
 ```powershell
-./scripts/run_relay.ps1 -Backend opencode -LogDir ./relay-logs -Prompt 'Run the task.'
+./scripts/relay.ps1 run --backend opencode --log-dir ./relay-logs -- "Run the task."
 ```
 
-Use this only when you need local raw worker output in addition to the live terminal output.
+Use this only when you need local raw worker output in addition to the live terminal output. The mirror is real-time, not a replay after exit.

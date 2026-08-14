@@ -13,6 +13,8 @@ param(
 # Compatibility entrypoint: delegates to canonical scripts/relay.ps1 route;
 # it no longer implements routing logic itself.
 $ErrorActionPreference = "Stop"
+Write-Host "relay: DEPRECATED - scripts/route_relay.ps1 is a compatibility wrapper; use scripts/relay.ps1 route (or 'relay route') instead."
+
 $relayScript = Join-Path $PSScriptRoot "relay.ps1"
 
 $relayArgs = @("route", $Action)
