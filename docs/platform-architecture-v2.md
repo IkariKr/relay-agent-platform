@@ -1,10 +1,14 @@
-# Relay Platform Architecture V2
+# Relay External-CLI Platform Architecture V2 Migration Record
 
 ## Status
 
-- Status: implemented architecture
-- Trigger: add `Antigravity CLI` support without repeating the current two-backend hardcoding pattern
-- Goal: turn the repository from a dual-backend skill family into a backend-extensible agent platform
+- Status: **implemented external-cli architecture / superseded as the long-term platform abstraction**
+- Original trigger: add `Antigravity CLI` support without repeating the two-backend hardcoding pattern
+- Current role: document the implemented CLI Backend Registry + Surface architecture
+- Long-term platform direction: [CodeX Native Subagent 优先路线图](codex-native-subagent-roadmap.md), which introduces a higher-level Worker Runtime Registry where this Backend Registry becomes the `external-cli` adapter
+
+> [!IMPORTANT]
+> This is an **implemented migration record and current external-cli baseline**, not the long-term architecture for every worker runtime. `backend.json`, `command`, `runner_script`, PATH availability and related CLI assumptions apply only to external CLI workers. A Codex `native-provider` worker must not be forced into this contract or represented by a fake CLI command. Future-looking statements in this file are scoped to maintenance/evolution of the external-cli layer unless they explicitly link to the native-subagent roadmap.
 
 ## Implementation Status
 
@@ -138,9 +142,11 @@ That means:
 
 This keeps the current user-facing products intact while allowing new backends such as `agy` to be added with bounded surface area.
 
-## Target Repository Shape
+## Implemented External-CLI Repository Shape
 
-The existing `backends/`, `packages/`, and `docs/` folders can stay, but the repository needs a true platform layer and explicit surface manifests.
+The tree below is the target that this historical v2 migration implemented for the **external-cli sublayer only**. It is not the final repository shape for native-provider workers. The authoritative full future tree, including Worker Registry, CodeX/Codex host adapter, capability probe, transports, doctor/evidence and native-provider packs, is defined in [CodeX Native Subagent 优先路线图](codex-native-subagent-roadmap.md#24-最终目标仓库结构).
+
+The existing `backends/`, `packages/`, and `docs/` folders stay as the external-cli/surface layer, with a platform layer and explicit surface manifests.
 
 ```text
 platform/
@@ -149,16 +155,8 @@ platform/
     surface-manifest.schema.json
     routing.schema.json
   runtime/
-    DelegateCommon.psm1
+    BackendConfig.psm1
     BackendRegistry.psm1
-    RoutingEngine.psm1
-    SurfaceInvoker.psm1
-  generation/
-    BuildPackages.psm1
-    RenderSkillMarkdown.psm1
-    RenderAgentYaml.psm1
-  validation/
-    ValidatePackages.psm1
 
 backends/
   claude/
@@ -193,9 +191,9 @@ packages/
 docs/
 ```
 
-## Backend Contract
+## External CLI Backend Contract
 
-Each backend must become a self-describing adapter rather than an implied convention.
+Each external CLI backend must become a self-describing adapter rather than an implied convention. This contract is intentionally narrower than the Worker Runtime contract defined by the native-subagent roadmap.
 
 Each `backends/<id>/backend.json` should define:
 
@@ -266,27 +264,15 @@ During migration:
 
 The `agent` id should be reserved for the router surface and must never appear as a backend id in `backends/*/backend.json`.
 
-## Unified Runtime Design
+## External CLI Runtime Design
 
-### 1. Keep a generic public runtime
+### 1. Keep a generic public thin runtime
 
 `relay-agent` should stop growing backend-specific top-level flags.
 
-The unified runtime should keep only platform-level parameters such as:
+The current execution contract is governed by [Thin Relay v2 SOP](thin-relay-v2-sop.md): one native CLI invocation, explicit backend/model/agent, raw stdout/stderr, native exit code, and no Relay-owned wall-clock timeout, idle timeout, automatic retry, Git polling, JSONL summarization, or manufactured progress.
 
-- `-Prompt`
-- `-Backend auto|<registered id>`
-- `-AutoStrategy`
-- `-AutoConfigPath`
-- `-Workdir`
-- `-MaxTurns`
-- `-TimeoutSeconds`
-- `-IdleTimeoutSeconds`
-- `-PollSeconds`
-- `-StatusSeconds`
-- `-TailLines`
-- `-FullLog`
-- `-WhatIf`
+Historical v1 parameters such as `MaxTurns`, `TimeoutSeconds`, `IdleTimeoutSeconds`, `PollSeconds`, `StatusSeconds`, `TailLines`, and `FullLog` are not part of the target thin runtime and must not be reintroduced by native-provider work.
 
 ### 1.1 Explicit backend validation changes
 
@@ -417,7 +403,7 @@ The `v2` resolver must:
 
 The current boolean-input shape of `Resolve-AutoConfiguredBackend` should be treated as a deprecated implementation seam during migration.
 
-## Build And Validation V2
+## Build And Validation V2 (external-cli scope)
 
 ### Build
 
@@ -448,7 +434,7 @@ It should:
 3. validate generated package files against the declared source-of-truth files
 4. validate routing configs against the current routing schema
 
-This turns validation from a per-backend checklist into a platform invariant.
+This turns validation from a per-backend checklist into an external-cli platform invariant. Native-provider validation must instead dispatch through the future Worker Runtime Registry and its runtime-specific validator; it must not require a runner script or PATH command.
 
 ### Validation invariants by phase
 

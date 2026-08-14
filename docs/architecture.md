@@ -1,16 +1,18 @@
 # Relay Architecture
 
-This document describes the current repository shape after the `v2` platform migration.
+This document describes the **currently implemented external-cli repository shape** after the `v2` platform migration.
 
-For the architecture decision record and migration details, see:
+For the implemented CLI registry migration record and the next platform abstraction, see:
 
-- `docs/platform-architecture-v2.md`
+- `docs/platform-architecture-v2.md`: implemented external-cli Backend Registry + Surface architecture
+- `docs/codex-native-subagent-roadmap.md`: long-term Worker Runtime Registry and CodeX native-provider implementation plan
 
 The short version is:
 
-- the repo now follows a registry + adapter + surface architecture
-- backend addition is manifest-driven instead of hardcoded in runtime, routing, build, and validation scripts
-- `Claude`, `OpenCode`, and `Antigravity` are all registered backends, and `relay-agent` is the router surface
+- the repo currently follows a registry + adapter + surface architecture for external CLI workers
+- CLI backend addition is manifest-driven instead of hardcoded in runtime, routing, build, and validation scripts
+- `Claude`, `OpenCode`, and `Antigravity` are registered CLI backends, and `relay-agent` is the router surface
+- the next architecture layer is a Worker Runtime Registry; the current Backend Registry becomes its `external-cli` adapter rather than being stretched to represent provider-native children
 
 The sections below describe the current codebase layout and the remaining historical exceptions.
 
@@ -24,17 +26,21 @@ Related planning documents:
 - `docs/troubleshooting.md`: common failure modes and recovery steps.
 - `docs/release-checklist.md`: maintainer release workflow and smoke tests.
 - `docs/v1.0.0-release-notes.md`: release messaging for the initial public version.
-- `docs/platform-architecture-v2.md`: implemented platform architecture and migration record for `v2`.
+- `docs/platform-architecture-v2.md`: implemented external-cli platform architecture and migration record for `v2`.
+- `docs/codex-native-subagent-roadmap.md`: CodeX-first plan for real third-party provider native children, capability probing, transport, safety, and acceptance gates.
 
 ## Layout
 
 - `shared/`: single source of truth for reusable docs and PowerShell helpers.
-- `platform/`: platform contracts and runtime modules shared by the router surface.
+- `platform/`: current external-cli contracts/runtime modules shared by the router surface; planned home for the higher-level Worker Runtime Registry, CodeX host adapter, and provider-native transports.
 - `backends/`: backend-specific metadata and behavior notes.
 - `surfaces/`: public surface manifests that drive generated packages.
 - `packages/relay-antigravity/`: installable Antigravity package generated and validated from shared sources.
 - `packages/relay-opencode/`: installable OpenCode package generated and validated from shared sources.
 - `packages/relay-agent/`: unified multi-backend entrypoint package generated from shared and backend sources.
+- `shared/scripts/ThinRelay.psm1`: current external-cli thin execution core; owns command construction/default merging/process invocation, but not routing policy or native child lifecycle.
+- `scripts/run_relay.ps1`: current public thin wrapper; target migration is to canonical `scripts/relay.ps1 run` per Thin Relay v2 SOP.
+- `scripts/route_relay.ps1`: current external-cli routing wrapper; future Worker Dispatch sits above this layer rather than replacing its backend-routing role.
 - `scripts/build-packages.ps1`: regenerates package metadata and runtime copies by iterating over declared surfaces and backends.
 - `scripts/validate-packages.ps1`: manifest-driven consistency checks for generated outputs.
 - `scripts/connect-fork.ps1`: switches the repository to `origin=<your fork>` and `upstream=<source repo>` when the fork URL is available.
@@ -51,11 +57,12 @@ These exceptions are survivable, but they should not be treated as the long-term
 
 ## Branching
 
-- `main`: stable branch that tracks the upstream Claude repository shape.
-- `feat/opencode-shared-core`: current integration branch for shared-core extraction and the first OpenCode package.
-- Future recommendation:
-  - `sync/upstream-claude` for upstream pulls and conflict resolution.
-  - `feat/multi-backend-skill` when introducing a unified entrypoint for Claude and OpenCode.
+Current repository state at this planning baseline:
+
+- `main`: current checked-out baseline branch.
+- `codex/thin-relay-v2`: existing topic branch for Thin Relay v2 work.
+
+Historical branch names such as `feat/opencode-shared-core` and `feat/multi-backend-skill` are no longer current architecture guidance. New Worker Registry / native-provider work should start from the intended current baseline using a fresh topic branch or isolated worktree and follow the repository's normal review workflow.
 
 ## Sync Strategy
 

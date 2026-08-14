@@ -1,4 +1,3 @@
-
 # Relay
 
 > Relay is the new name for the former `codex-delegate-*` skill family.
@@ -13,15 +12,16 @@
 
 那这个仓库大概率就是你要找的东西。
 
-`Relay` 不是“让代理自己一路改到天亮”的全自动脚本；v2 将它收敛为面向 Codex 的**薄型多后端执行层**:
+`Relay` 不是“让代理自己一路改到天亮”的全自动脚本。当前 v2 已将外部 CLI 路线收敛为**薄型多后端执行层**，下一阶段则把它升级为面向 Codex 的 **Worker Runtime Platform**：
 
-- Codex 主代理或原生 subagent 负责拆解任务、可见进度、复核结果、验证和提交
-- Claude / OpenCode / Antigravity 负责执行一条原生命令
-- Relay 只保留最小参数映射、透传、原始输出和退出码
+- Codex 主代理负责拆解任务、数据边界、复核、验证和最终决策
+- `native-provider` worker 以真正的 Codex native child 运行，并可使用独立第三方 provider/model
+- `external-cli` worker（Claude / OpenCode / Antigravity）仍只执行一条原生命令
+- Relay 负责 worker 声明、安装、能力探测、安全策略，以及 external-cli 的最小参数映射、原始输出和退出码
 
-这里的 `Codex`，指的是你当前使用的 Codex / CodeX 主控端。
+本文默认使用 `Codex` 指 OpenAI Codex 产品/runtime，包括主代理、CLI、原生 multi-agent 与 native child 生命周期；只有在特指当前 `CodeX` 宿主集成或 host adapter 时才使用 `CodeX`。
 
-一句话说，`Relay` 是一套把“代理执行”做成可审查、可验证、可回滚、可路由流程的基础设施。
+一句话说，`Relay` 是一套把“代理执行”做成可审查、可验证、可路由的 worker runtime 基础设施；Git 回滚、提交与最终接受仍由 Codex/用户显式负责。
 
 ## 这个项目到底在解决什么
 
@@ -36,29 +36,33 @@
 - 把任务生命周期和判断留给 Codex
 - 把路由变为显式可选能力，不再在默认链路中重试、超时、轮询 Git 或解析 JSONL
 
-它的工作流大致是这样:
+它的目标工作流大致是这样：
 
 ```text
 [ 你的需求 ]
     |
     v
 [ Codex 总控 ]
-    |  拆解任务、设置边界、选择后端
+    |  拆解任务、设置数据边界、选择 worker
     v
-[ Relay 路由 ]
-    |--> relay-claude
-    |--> relay-opencode
-    `--> relay-antigravity
-           |
-           v
-      [ 返回实现结果 ]
-           |
-           v
-[ Codex 复核 ]
-    |  决定接受、重试、验证或打回
-    v
-[ 最终结果 ]
+[ Worker Runtime Registry ]
+    |--> native-provider
+    |      `--> Codex native child → DeepSeek / 其他第三方 provider
+    |
+    `--> external-cli
+           `--> Thin Relay → Claude / OpenCode / Antigravity CLI
+                    |
+                    v
+               [ 返回结果 ]
+                    |
+                    v
+              [ Codex 复核 ]
+                    |
+                    v
+                [ 最终结果 ]
 ```
+
+自动路由是显式可选能力，不是所有执行的必经层。
 
 所以它更适合认真做工程的人，而不是只追求“一条命令全自动提交”的玩法。
 
@@ -74,7 +78,7 @@
 
 ### 先记住这个定位
 
-`Relay` 现在提供的是一套多后端委托能力:
+`Relay` 当前稳定提供 external-cli 多后端委托能力，并正在按 [CodeX Native Subagent 优先路线图](docs/codex-native-subagent-roadmap.md) 实现首批 `native-provider` worker：
 
 - `relay-agent`
   默认推荐的统一入口，支持自动路由和显式后端选择
@@ -85,7 +89,19 @@
 - `relay-antigravity`
   只走 Antigravity CLI 的专用包
 
-如果你是第一次接触，请从薄入口 `scripts/run_relay.ps1` 开始。
+如果你是第一次接触 external-cli 路线，请从薄入口 `scripts/run_relay.ps1` 开始。第三方模型的 Codex native child 能力只有在对应 worker 通过 capability probe 与 native identity/provider/callback smoke test 后，才会在发布文档中标记为 supported。
+
+### Roadmap 状态
+
+当前实现状态与目标语法必须分开看：
+
+- external-cli Backend Registry / Surface 架构已存在，`scripts/run_relay.ps1` 是当前真实可用薄入口；
+- Thin Relay v2 仍有 Phase 0 加固项需要完成，尤其是 `--log-dir` 实时 mirror、token-aware redaction 与进程级契约测试；
+- Worker Runtime Registry（A1）和 CodeX host / Codex capability probe（A2）尚未作为 runtime 代码落地；
+- DeepSeek 等第三方 `native-provider` 目前仍是计划能力，**尚不能称为 supported native child**；
+- README 只有在 Thin Relay canonical `relay` entrypoint 对应 Phase exit gate 通过后，才会把示例从 `run_relay.ps1` 切换到 `relay run`，避免文档先于代码。
+
+能力声明门槛见 [CodeX Native Subagent 优先路线图](docs/codex-native-subagent-roadmap.md#81-phase--release--claim-gate)，跨阶段测试索引见 [测试矩阵](docs/test-matrix.md)。
 
 ### 3 分钟感受一下
 
@@ -119,6 +135,7 @@ Relay 会打印并执行可复制的原生 OpenCode 命令；Codex 负责后续 
 
 - [docs/quickstart.md](docs/quickstart.md)
 - [docs/thin-relay-v2-sop.md](docs/thin-relay-v2-sop.md)
+- [docs/codex-native-subagent-roadmap.md](docs/codex-native-subagent-roadmap.md)
 - [docs/package-selection.md](docs/package-selection.md)
 - [docs/troubleshooting.md](docs/troubleshooting.md)
 
@@ -146,6 +163,8 @@ Relay 会打印并执行可复制的原生 OpenCode 命令；Codex 负责后续 
   重新生成 packages
 - `scripts/validate-packages.ps1`
   校验生成结果
+- `platform/`
+  平台 runtime / manifest contract；下一阶段承载 Worker Runtime Registry、CodeX host adapter 与 native-provider transport
 
 维护时重点看 `shared/`、`backends/`、`scripts/` 和 `docs/`。
 
@@ -174,9 +193,11 @@ Relay 会打印并执行可复制的原生 OpenCode 命令；Codex 负责后续 
 ### 维护者推荐阅读顺序
 
 - [docs/installation.md](docs/installation.md)
-- [docs/routing-guide.md](docs/routing-guide.md)
 - [docs/architecture.md](docs/architecture.md)
-- [docs/platform-architecture-v2.md](docs/platform-architecture-v2.md)
+- [docs/codex-native-subagent-roadmap.md](docs/codex-native-subagent-roadmap.md)
+- [docs/thin-relay-v2-sop.md](docs/thin-relay-v2-sop.md)
+- [docs/platform-architecture-v2.md](docs/platform-architecture-v2.md)（当前 external-cli 架构记录）
+- [docs/routing-guide.md](docs/routing-guide.md)
 - [docs/release-checklist.md](docs/release-checklist.md)
 
 ## 最后一句话
