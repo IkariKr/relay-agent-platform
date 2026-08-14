@@ -44,6 +44,9 @@
   },
   "provider": {
     "provider_id": "deepseek",
+    "provider_aliases": [
+      "custom"
+    ],
     "model_id": "<provider-model-id>",
     "wire_api": "responses",
     "credential_source": "env:DEEPSEEK_API_KEY",

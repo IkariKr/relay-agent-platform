@@ -104,4 +104,40 @@ function Uninstall-WorkerPack {
     return [pscustomobject]@{ worker_id = $WorkerId; removed = @($removed) }
 }
 
-Export-ModuleMember -Function Get-WorkerPackDirectory, Test-WorkerSecretPreflight, Resolve-InstallOwnedPaths, Install-WorkerPack, Uninstall-WorkerPack, Test-WorkerManifest, Load-NativeProviderWorkerManifest, ConvertFrom-BackendManifest, Get-WorkerRegistryRoot, Get-WorkerDescriptors, Get-WorkerDescriptor, Get-WorkerRuntimeType, Assert-WorkerRegistered
+function Test-WorkerProviderAlignment {
+    # 检查宿主 config.toml 的 [model_providers.*] 名称是否与 pack 的 provider_id / 别名对齐。
+    # 只读 provider 段名称，不读取任何 secret 值。
+    # Checks whether host config [model_providers.*] names align with the pack's
+    # provider_id or declared aliases; reads section names only, never secret values.
+    param(
+        [Parameter(Mandatory = $true)][string]$WorkerId,
+        [string]$CodexConfigPath = "",
+        [string]$NativeProviderRoot = "",
+        [string]$BackendRoot = ""
+    )
+
+    $descriptor = Get-WorkerDescriptor -WorkerId $WorkerId -NativeProviderRoot $NativeProviderRoot -BackendRoot $BackendRoot
+    $expected = [string]$descriptor.provider.provider_id
+    $aliases = @()
+    if ($descriptor.provider.PSObject.Properties.Name -contains "provider_aliases") {
+        $aliases = @($descriptor.provider.provider_aliases | ForEach-Object { [string]$_ })
+    }
+
+    if ([string]::IsNullOrWhiteSpace($CodexConfigPath)) { $CodexConfigPath = Get-CodexConfigPath }
+    $actual = @()
+    if (Test-Path -LiteralPath $CodexConfigPath) {
+        $content = Get-Content -Raw -LiteralPath $CodexConfigPath
+        $actual = @([regex]::Matches($content, "(?m)^\s*\[model_providers\.([^\]]+)\]") | ForEach-Object { $_.Groups[1].Value.Trim() })
+    }
+
+    $matched = @($actual | Where-Object { $_ -eq $expected -or $aliases -contains $_ })
+    return [pscustomobject]@{
+        worker_id = $WorkerId
+        expected_provider = $expected
+        provider_aliases = $aliases
+        actual_providers = $actual
+        status = if ($matched.Count -gt 0) { "aligned" } else { "misaligned" }
+    }
+}
+
+Export-ModuleMember -Function Get-WorkerPackDirectory, Test-WorkerSecretPreflight, Test-WorkerProviderAlignment, Resolve-InstallOwnedPaths, Install-WorkerPack, Uninstall-WorkerPack, Test-WorkerManifest, Load-NativeProviderWorkerManifest, ConvertFrom-BackendManifest, Get-WorkerRegistryRoot, Get-WorkerDescriptors, Get-WorkerDescriptor, Get-WorkerRuntimeType, Assert-WorkerRegistered
