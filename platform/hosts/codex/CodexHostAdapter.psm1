@@ -58,13 +58,21 @@ function Get-HostIdentity {
 }
 
 function Test-HostNativeProviderCapability {
-    # 读取最新 capability evidence；任一 live-host 行为非 supported 即 fail closed。
-    # Reads the latest capability evidence; any live-host behavior not 'supported'
-    # fails closed.
-    $repoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
-    $evidenceDir = Join-Path $repoRoot "docs\evidence\codex-capability"
-    if (-not (Test-Path -LiteralPath $evidenceDir)) { return $false }
-    $latest = Get-ChildItem -LiteralPath $evidenceDir -Filter "*.json" -File | Sort-Object Name | Select-Object -Last 1
+    # 读取 capability evidence；任一 live-host 行为非 supported 即 fail closed。
+    # EvidenceDir 可注入（默认仓库 evidence 目录），保证测试确定性。
+    # Reads capability evidence; any live-host behavior not 'supported' fails closed.
+    # EvidenceDir is injectable (defaults to the repo evidence dir) for deterministic tests.
+    param(
+        [string]$CapabilityName = "native-provider-child",
+        [string]$EvidenceDir = ""
+    )
+
+    if ([string]::IsNullOrWhiteSpace($EvidenceDir)) {
+        $repoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+        $EvidenceDir = Join-Path $repoRoot "docs\evidence\codex-capability"
+    }
+    if (-not (Test-Path -LiteralPath $EvidenceDir)) { return $false }
+    $latest = Get-ChildItem -LiteralPath $EvidenceDir -Filter "*.json" -File | Sort-Object Name | Select-Object -Last 1
     if ($null -eq $latest) { return $false }
     $probe = Get-Content -Raw -LiteralPath $latest.FullName | ConvertFrom-Json
     foreach ($key in @("custom_agent_spawn", "fork_isolation", "native_wait_callback", "native_cancel", "plaintext_initial_message")) {

@@ -11,7 +11,10 @@ function Get-HostIdentity {
 }
 
 function Test-HostNativeProviderCapability {
-    param([string]$CapabilityName = "native-provider-child")
+    param(
+        [string]$CapabilityName = "native-provider-child",
+        [string]$EvidenceDir = ""
+    )
 
     return $false
 }

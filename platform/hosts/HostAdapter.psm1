@@ -6,14 +6,19 @@ $ErrorActionPreference = "Stop"
 # Get-HostInstalledWorkerRuntimeTypes；detector 据此决定可安装的 runtime。
 # Each host module exports a uniform interface; the detector derives installable runtimes.
 function Get-HostCapabilityReport {
-    param([Parameter(Mandatory = $true)][string]$HostModulePath)
+    param(
+        [Parameter(Mandatory = $true)][string]$HostModulePath,
+        # 可注入 evidence 目录，便于确定性测试；空值表示宿主默认。
+        # Optional injected evidence dir for deterministic tests; empty = host default.
+        [string]$EvidenceDir = ""
+    )
 
     Import-Module $HostModulePath -Force
     $hostModule = Get-Module ([System.IO.Path]::GetFileNameWithoutExtension($HostModulePath))
 
     return [pscustomobject]@{
         identity = (& $hostModule Get-HostIdentity)
-        native_provider_capable = (& $hostModule Test-HostNativeProviderCapability)
+        native_provider_capable = (& $hostModule Test-HostNativeProviderCapability -EvidenceDir $EvidenceDir)
         installable_runtime_types = @(& $hostModule Get-HostInstalledWorkerRuntimeTypes)
     }
 }

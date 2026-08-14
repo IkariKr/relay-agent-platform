@@ -32,10 +32,60 @@ Describe "Phase E: codex host gates native capability on evidence" {
         $report.identity.name | Should -Be "win32"
         $report.identity.codex_cli_version | Should -Not -BeNullOrEmpty
     }
-    It "fails closed while live-host capability evidence is unknown" {
-        $report = Get-HostCapabilityReport -HostModulePath $script:codexHost
-        # A2 evidence: custom_agent_spawn/fork_isolation/wait_callback/plaintext all unknown
-        $report.native_provider_capable | Should -BeFalse
-        $report.installable_runtime_types | Should -Contain "external-cli"
+    It "fails closed when no capability evidence exists" {
+        $evDir = Join-Path ([System.IO.Path]::GetTempPath()) ("relay-host-ev-" + [guid]::NewGuid().ToString("N"))
+        New-Item -ItemType Directory -Path $evDir -Force | Out-Null
+        try {
+            $report = Get-HostCapabilityReport -HostModulePath $script:codexHost -EvidenceDir $evDir
+            $report.native_provider_capable | Should -BeFalse
+            $report.installable_runtime_types | Should -Contain "external-cli"
+        }
+        finally {
+            Remove-Item -LiteralPath $evDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+    It "reports native-provider capable when live evidence is all supported" {
+        $evDir = Join-Path ([System.IO.Path]::GetTempPath()) ("relay-host-ev-" + [guid]::NewGuid().ToString("N"))
+        New-Item -ItemType Directory -Path $evDir -Force | Out-Null
+        try {
+            $supported = [ordered]@{ status = "supported" }
+            $probe = [ordered]@{
+                capabilities = [ordered]@{
+                    custom_agent_spawn      = $supported
+                    fork_isolation          = $supported
+                    native_wait_callback    = $supported
+                    native_cancel           = $supported
+                    plaintext_initial_message = $supported
+                }
+            }
+            $probe | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $evDir "2026-08-14-codex-0.147.0-win32.json") -Encoding utf8
+            $report = Get-HostCapabilityReport -HostModulePath $script:codexHost -EvidenceDir $evDir
+            $report.native_provider_capable | Should -BeTrue
+            $report.installable_runtime_types | Should -Contain "native-provider"
+        }
+        finally {
+            Remove-Item -LiteralPath $evDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+    It "fails closed when any live capability is not yet supported" {
+        $evDir = Join-Path ([System.IO.Path]::GetTempPath()) ("relay-host-ev-" + [guid]::NewGuid().ToString("N"))
+        New-Item -ItemType Directory -Path $evDir -Force | Out-Null
+        try {
+            $probe = [ordered]@{
+                capabilities = [ordered]@{
+                    custom_agent_spawn      = [ordered]@{ status = "supported" }
+                    fork_isolation          = [ordered]@{ status = "unknown" }
+                    native_wait_callback    = [ordered]@{ status = "unknown" }
+                    native_cancel           = [ordered]@{ status = "unknown" }
+                    plaintext_initial_message = [ordered]@{ status = "supported" }
+                }
+            }
+            $probe | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $evDir "2026-08-14-codex-0.147.0-win32.json") -Encoding utf8
+            $report = Get-HostCapabilityReport -HostModulePath $script:codexHost -EvidenceDir $evDir
+            $report.native_provider_capable | Should -BeFalse
+        }
+        finally {
+            Remove-Item -LiteralPath $evDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 }
