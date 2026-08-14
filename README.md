@@ -89,17 +89,17 @@
 - `relay-antigravity`
   只走 Antigravity CLI 的专用包
 
-如果你是第一次接触 external-cli 路线，请从薄入口 `scripts/run_relay.ps1` 开始。第三方模型的 Codex native child 能力只有在对应 worker 通过 capability probe 与 native identity/provider/callback smoke test 后，才会在发布文档中标记为 supported。
+如果你是第一次接触 external-cli 路线，请从薄入口 `scripts/relay.ps1 run` 开始（旧入口 `scripts/run_relay.ps1` 仍作为兼容层可用）。第三方模型的 Codex native child 能力只有在对应 worker 通过 capability probe 与 native identity/provider/callback smoke test 后，才会在发布文档中标记为 supported。
 
 ### Roadmap 状态
 
 当前实现状态与目标语法必须分开看：
 
-- external-cli Backend Registry / Surface 架构已存在，`scripts/run_relay.ps1` 是当前真实可用薄入口；
-- Thin Relay v2 仍有 Phase 0 加固项需要完成，尤其是 `--log-dir` 实时 mirror、token-aware redaction 与进程级契约测试；
+- external-cli Backend Registry / Surface 架构已存在，canonical 入口 `scripts/relay.ps1 run` 已可用（`scripts/run_relay.ps1` 为兼容入口）；
+- Thin Relay v2 Phase 0 已收口：`--log-dir` 实时 mirror、token-aware redaction、进程级契约测试均已落地并有测试证据；
 - Worker Runtime Registry（A1）和 CodeX host / Codex capability probe（A2）尚未作为 runtime 代码落地；
 - DeepSeek 等第三方 `native-provider` 目前仍是计划能力，**尚不能称为 supported native child**；
-- README 只有在 Thin Relay canonical `relay` entrypoint 对应 Phase exit gate 通过后，才会把示例从 `run_relay.ps1` 切换到 `relay run`，避免文档先于代码。
+- 示例已切换到 canonical `relay run`；`run_relay.ps1` 作为兼容入口保留，按 SOP Phase 3 弃用。
 
 能力声明门槛见 [CodeX Native Subagent 优先路线图](docs/codex-native-subagent-roadmap.md#81-phase--release--claim-gate)，跨阶段测试索引见 [测试矩阵](docs/test-matrix.md)。
 
@@ -116,7 +116,7 @@
 2. 使用（显式选择后端）
 
 ```text
-./scripts/run_relay.ps1 -Backend opencode -Model opencode/deepseek-v4-flash-free -Prompt "<你的任务>"
+./scripts/relay.ps1 run --backend opencode --model opencode/deepseek-v4-flash-free -- "<你的任务>"
 ```
 
 Relay 会打印并执行可复制的原生 OpenCode 命令；Codex 负责后续 review。

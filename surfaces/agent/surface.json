@@ -14,6 +14,8 @@
   "public_scripts": [
     "backends/agent/run_delegate_agent.ps1",
     "scripts/run_relay.ps1",
+    "scripts/relay.ps1",
+    "scripts/relay.cmd",
     "scripts/route_relay.ps1",
     "backends/agent/manage_auto_routing.ps1",
     "backends/agent/manage_auto_routing_nl.ps1",
