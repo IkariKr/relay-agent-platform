@@ -97,8 +97,9 @@
 
 - external-cli Backend Registry / Surface 架构已存在，canonical 入口 `scripts/relay.ps1 run` 已可用（`scripts/run_relay.ps1` 为兼容入口）；
 - Thin Relay v2 Phase 0 已收口：`--log-dir` 实时 mirror、token-aware redaction、进程级契约测试均已落地并有测试证据；
-- Worker Runtime Registry（A1）和 CodeX host / Codex capability probe（A2）尚未作为 runtime 代码落地；
-- DeepSeek 等第三方 `native-provider` 目前仍是计划能力，**尚不能称为 supported native child**；
+- Worker Runtime Registry（A1）、CodeX host / Codex capability probe（A2）、DeepSeek pack + preflight（B1）、Dispatch Policy（C）、第二 provider 零核心特判（D）、host adapter（E）均已落地（81 项确定性测试）；
+- B2 原生 plaintext transport spike **已延期**：需要活 Codex 宿主 + 用户显式授权的第三方付费调用，证据/ADR 见 `docs/evidence/transport/b2-spike-2026-08-14.md`；B3 未进入；
+- DeepSeek 等第三方 `native-provider` 目前仍是计划能力，**尚不能称为 supported native child**（B4 paid smoke 未通过前保持该声明门槛）；
 - 示例已切换到 canonical `relay run`；`run_relay.ps1` 作为兼容入口保留，按 SOP Phase 3 弃用。
 
 能力声明门槛见 [CodeX Native Subagent 优先路线图](docs/codex-native-subagent-roadmap.md#81-phase--release--claim-gate)，跨阶段测试索引见 [测试矩阵](docs/test-matrix.md)。

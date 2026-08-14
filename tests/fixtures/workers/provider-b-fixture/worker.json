@@ -1,0 +1,46 @@
+{
+  "id": "provider-b",
+  "display_name": "Provider B Synthetic",
+  "runtime_type": "native-provider",
+  "purpose": "second-provider extensibility acceptance fixture (zero core change)",
+  "host_requirements": {
+    "codex_multi_agent": true
+  },
+  "data_boundary": {
+    "execution_boundary": "codex-native-child",
+    "egress": "external-transmit",
+    "sensitive_auto_dispatch": "deny-unless-explicitly-classified"
+  },
+  "permissions": {
+    "sandbox_mode": "read-only",
+    "write": false
+  },
+  "install_contract": {
+    "kind": "pack-owned-file-staging",
+    "agent_role": "provider-b",
+    "config_file": "agent.toml",
+    "owned_paths": [
+      "agents/relay/provider-b.toml"
+    ]
+  },
+  "health_check": {
+    "kind": "config-parse"
+  },
+  "smoke_test": {
+    "kind": "paid",
+    "required": true
+  },
+  "uninstall_contract": {
+    "kind": "pack-owned-only",
+    "owned_paths": [
+      "agents/relay/provider-b.toml"
+    ]
+  },
+  "provider": {
+    "provider_id": "provider-b",
+    "model_id": "provider-b-model",
+    "wire_api": "responses",
+    "credential_source": "env:PROVIDER_B_API_KEY",
+    "default_sandbox": "read-only"
+  }
+}

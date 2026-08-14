@@ -1,0 +1,10 @@
+# provider-b.toml — second-provider acceptance fixture overlay.
+model_provider = "provider-b"
+model = "provider-b-model"
+sandbox_mode = "read-only"
+
+[model_providers.provider-b]
+name = "Provider B"
+base_url = "<responses-compatible-endpoint>"
+wire_api = "responses"
+env_key = "PROVIDER_B_API_KEY"

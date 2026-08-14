@@ -45,4 +45,36 @@ function Get-CodexCliInfo {
     }
 }
 
-Export-ModuleMember -Function Get-CodexCliVersion, Get-CodexHome, Get-CodexConfigPath, Get-CodexHostInfo, Get-CodexCliInfo
+# ---- 统一 host 契约（roadmap Phase E）----
+function Get-HostIdentity {
+    $hostInfo = Get-CodexHostInfo
+    $cliInfo = Get-CodexCliInfo
+    return [pscustomobject]@{
+        name = $hostInfo.name
+        os_version = $hostInfo.os_version
+        pwsh_version = $hostInfo.pwsh_version
+        codex_cli_version = $cliInfo.cli_version
+    }
+}
+
+function Test-HostNativeProviderCapability {
+    # 读取最新 capability evidence；任一 live-host 行为非 supported 即 fail closed。
+    # Reads the latest capability evidence; any live-host behavior not 'supported'
+    # fails closed.
+    $repoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+    $evidenceDir = Join-Path $repoRoot "docs\evidence\codex-capability"
+    if (-not (Test-Path -LiteralPath $evidenceDir)) { return $false }
+    $latest = Get-ChildItem -LiteralPath $evidenceDir -Filter "*.json" -File | Sort-Object Name | Select-Object -Last 1
+    if ($null -eq $latest) { return $false }
+    $probe = Get-Content -Raw -LiteralPath $latest.FullName | ConvertFrom-Json
+    foreach ($key in @("custom_agent_spawn", "fork_isolation", "native_wait_callback", "native_cancel", "plaintext_initial_message")) {
+        if ($probe.capabilities.$key.status -ne "supported") { return $false }
+    }
+    return $true
+}
+
+function Get-HostInstalledWorkerRuntimeTypes {
+    return @("external-cli", "native-provider")
+}
+
+Export-ModuleMember -Function Get-CodexCliVersion, Get-CodexHome, Get-CodexConfigPath, Get-CodexHostInfo, Get-CodexCliInfo, Get-HostIdentity, Test-HostNativeProviderCapability, Get-HostInstalledWorkerRuntimeTypes
