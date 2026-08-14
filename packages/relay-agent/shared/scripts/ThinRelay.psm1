@@ -19,7 +19,7 @@ function Resolve-ThinRelayCommand {
     $commandName = Get-ThinRelayCommand -Backend $Backend
     $command = Get-Command $commandName -ErrorAction SilentlyContinue
     if ($null -eq $command) {
-        throw "Relay error: backend '$Backend' requires '$commandName' on PATH. Run 'relay doctor --backend $Backend' or install the native CLI."
+        throw "Relay error: backend '$Backend' requires '$commandName' on PATH. Install the native CLI, ensure '$commandName' is available on PATH, then retry scripts/run_relay.ps1. The planned 'relay doctor' command is not available yet."
     }
 
     return $command.Source
