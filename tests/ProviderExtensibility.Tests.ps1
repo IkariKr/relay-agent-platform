@@ -3,7 +3,14 @@
 # smoke fixture, with zero provider-specific branches in the registry core.
 BeforeAll {
     $repoRoot = Split-Path -Parent $PSScriptRoot
+    # 顺序敏感：WorkerDispatch 模块内会 -Force 重载 WorkerRegistry（PowerShell 会
+    # 把它从全局会话移除并装入 WorkerDispatch 模块作用域），因此必须先 Import
+    # WorkerDispatch，再 Import WorkerRegistry 到全局，避免测试依赖执行顺序。
+    # Order matters: WorkerDispatch -Force reloads WorkerRegistry into its module
+    # scope and evicts the global copy, so import WorkerDispatch first, then the
+    # registry, keeping this file self-contained.
     Import-Module (Join-Path $repoRoot "platform\registry\WorkerDispatch.psm1") -Force
+    Import-Module (Join-Path $repoRoot "platform\registry\WorkerRegistry.psm1") -Force
     $script:fixtureRoot = Join-Path $PSScriptRoot "fixtures\workers"
     $script:backendRoot = Join-Path $repoRoot "backends"
 }

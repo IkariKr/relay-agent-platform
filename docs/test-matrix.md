@@ -185,6 +185,13 @@ NP-CRED-003（不存在 `--api-key <value>` 参数）与 NP-CLI-* / NP-SKILL-* /
 | NP-PKG-001 | relay-agent package 自包含 registry/contracts/hosts/credentials/generation/cli 与 worker pack | deterministic | 必须 |
 | NP-PKG-002 | 干净 package 树内可直接运行 `worker list --json` | deterministic | 必须 |
 
+## 8.4 Onboarding E2E（onboarding P0-E）
+
+| ID | 用例 | 类型 | Gate |
+|---|---|---|---|
+| NP-E2E-S1 | 全新用户只提供 Base URL / Model ID / API Key：status needs-config → configure(stdin) → doctor ready → dispatch-ready → uninstall 回 needs-config | deterministic（零付费） | 必须 |
+| NP-E2E-S2 | 已有 profile 换模型：`--keep-credential` 不重输 key → doctor ready → dispatch 使用新 model | deterministic（零付费） | 必须 |
+
 ## 9. 测试所有权
 
 - Thin Relay external-cli：`docs/Archive/thin-relay-v2-sop.md`

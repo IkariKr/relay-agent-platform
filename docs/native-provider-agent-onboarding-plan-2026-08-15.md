@@ -833,7 +833,9 @@ scripts/
 
 ## 12. 分阶段实施顺序
 
-### P0-A：Profile 与 credential contract
+> 状态（2026-08-15）：P0-A 至 P0-E 已全部落地并随 `scripts/test.ps1` 的 deterministic suite 验证（137 项，含 NP-PROFILE/NP-CRED/NP-GEN/NP-CLI/NP-SKILL/NP-PKG/NP-E2E）。P0-E 的 paid native child 验收保留给真实宿主 + 显式授权。
+
+### P0-A：Profile 与 credential contract `[x] 已落地`
 
 1. 新增 `provider-profile.schema.json`；
 2. 实现 `WorkerProfileStore`；
@@ -844,7 +846,7 @@ scripts/
 
 **Exit gate：** 可以安全保存 `Base URL + Model ID + credential reference`，任何持久化文件与输出都不含 secret。
 
-### P0-B：Codex 配置生成与 ownership
+### P0-B：Codex 配置生成与 ownership `[x] 已落地`
 
 1. pack 模板参数化；
 2. profile → provider/agent overlay generator；
@@ -855,7 +857,7 @@ scripts/
 
 **Exit gate：** 用户不手改 TOML 即可得到 Codex 可发现的 worker 配置。
 
-### P0-C：`relay worker` CLI
+### P0-C：`relay worker` CLI `[x] 已落地`
 
 实现：
 
@@ -874,7 +876,7 @@ uninstall
 
 **Exit gate：** 一个不了解仓库内部结构的人只靠 CLI help 就能完成配置。
 
-### P0-D：Skill Agent protocol
+### P0-D：Skill Agent protocol `[x] 已落地`
 
 1. 新增 `shared/docs/native-provider-onboarding.md`；
 2. 修改 package generation，把 onboarding 注入 `relay-agent/SKILL.md`；
@@ -885,7 +887,7 @@ uninstall
 
 **Exit gate：** 给一个没有项目上下文的 Agent 安装 `relay-agent` 后，只告诉它 Base URL / Model ID / API Key，它能从 skill 自己推导并完成正确配置流程。
 
-### P0-E：端到端 Agent onboarding 验收
+### P0-E：端到端 Agent onboarding 验收 `[x] CLI 级 E2E 已落地；paid native child 待真实宿主验收`
 
 至少执行两类场景：
 
