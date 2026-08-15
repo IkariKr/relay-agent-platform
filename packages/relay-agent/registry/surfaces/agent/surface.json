@@ -28,6 +28,6 @@
     }
   ],
   "package_root": "packages/relay-agent",
-  "doc_entry": "docs/routing-guide.md",
+  "doc_entry": "docs/Archive/routing-guide.md",
   "notes_backend": "agent"
 }

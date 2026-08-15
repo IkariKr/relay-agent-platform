@@ -132,9 +132,9 @@ Hook 只有在 B2 evidence 证明 native spawn/lifecycle 可用、task delivery 
 
 ## 8. 测试所有权
 
-- Thin Relay external-cli：`docs/thin-relay-v2-sop.md`
+- Thin Relay external-cli：`docs/Archive/thin-relay-v2-sop.md`
 - Worker/native-provider：`docs/codex-native-subagent-roadmap.md`
-- external-cli registry/build historical invariants：`docs/platform-architecture-v2.md`
+- external-cli registry/build historical invariants：`docs/Archive/platform-architecture-v2.md`
 - 本文件：跨文档唯一索引，不复制所有实现细节
 
 发布前应从本矩阵生成或人工核对 phase-specific checklist；任何 `supported native child` 声明都必须能回指到具体 evidence 与本矩阵中的 B4 gate。

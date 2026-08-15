@@ -134,11 +134,11 @@ Relay 会打印并执行可复制的原生 OpenCode 命令；Codex 负责后续 
 
 ### 使用者继续往下看
 
-- [docs/quickstart.md](docs/quickstart.md)
-- [docs/thin-relay-v2-sop.md](docs/thin-relay-v2-sop.md)
+- [docs/Archive/quickstart.md](docs/Archive/quickstart.md)
+- [docs/Archive/thin-relay-v2-sop.md](docs/Archive/thin-relay-v2-sop.md)
 - [docs/codex-native-subagent-roadmap.md](docs/codex-native-subagent-roadmap.md)
-- [docs/package-selection.md](docs/package-selection.md)
-- [docs/troubleshooting.md](docs/troubleshooting.md)
+- [docs/Archive/package-selection.md](docs/Archive/package-selection.md)
+- [docs/Archive/troubleshooting.md](docs/Archive/troubleshooting.md)
 
 ## 给维护者
 
@@ -189,17 +189,15 @@ Relay 会打印并执行可复制的原生 OpenCode 命令；Codex 负责后续 
 
 完整安装说明在这里:
 
-- [docs/installation.md](docs/installation.md)
+- [docs/Archive/installation.md](docs/Archive/installation.md)
 
 ### 维护者推荐阅读顺序
 
-- [docs/installation.md](docs/installation.md)
-- [docs/architecture.md](docs/architecture.md)
-- [docs/codex-native-subagent-roadmap.md](docs/codex-native-subagent-roadmap.md)
-- [docs/thin-relay-v2-sop.md](docs/thin-relay-v2-sop.md)
-- [docs/platform-architecture-v2.md](docs/platform-architecture-v2.md)（当前 external-cli 架构记录）
-- [docs/routing-guide.md](docs/routing-guide.md)
-- [docs/release-checklist.md](docs/release-checklist.md)
+- [docs/codex-native-subagent-roadmap.md](docs/codex-native-subagent-roadmap.md)（当前实施路线图）
+- [docs/test-matrix.md](docs/test-matrix.md)（跨阶段测试索引）
+- [docs/v1-roadmap.md](docs/v1-roadmap.md)（v1.0.0 发布计划，尚未发版）
+
+已实施/历史记录文档归档在 [docs/Archive/](docs/Archive/)：安装、quickstart、SOP、架构与迁移记录、包选择、路由指南、troubleshooting、发布清单、重命名与 fork 流程。
 
 ## 最后一句话
 
