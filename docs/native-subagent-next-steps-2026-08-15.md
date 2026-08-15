@@ -67,7 +67,7 @@ docs/evidence/transport/b4-native-child-desktop-<date>.jsonl
 
 > 详细设计见 [`native-provider-agent-onboarding-plan-2026-08-15.md`](native-provider-agent-onboarding-plan-2026-08-15.md)。该设计是本节的 P0 实施细化，目标是让安装 `relay-agent` skill 的任意 Agent 都能自行发现配置状态、向用户只收集 Base URL / Model ID / API Key，并自动完成安全配置、doctor 与执行准备。
 
-> 状态（2026-08-15）：P0-1/P0-2/P0-3 已落地（`relay worker` 命令面 + profile/credential contract + 锁定 Pester runner，147 项确定性测试，`scripts/test.ps1` 复现）。P0-4（Codex CLI 当前版本 regression，需覆盖 profile-suffixed `<worker-id>--<profile-id>` agent role 的 native child 全链路）与 P0-5（Desktop 独立 B4）待执行。
+> 状态（2026-08-15）：P0-1/P0-2/P0-3 已落地（`relay worker` 命令面 + profile/credential contract + 锁定 Pester runner，147 项确定性测试，`scripts/test.ps1` 复现）。**P0-4 与 P0-5 已完成**：profile-suffixed `<worker-id>--<profile-id>` agent role 的 native child 全链路已在 codex-cli 0.147.0（`b4-native-child-profile-suffix-2026-08-15.md`）与 Codex Desktop 26.810.6296.0 / bundled 0.148.0-alpha.9（`b4-native-child-desktop-2026-08-15.md`）各自独立验收通过；Desktop UI 展示层由用户手动确认。
 
 ### 当前问题
 
@@ -306,9 +306,9 @@ P0-2  native-provider 正式 worker CLI + JSON contract + skill Agent 协议    
   ↓
 P0-3  锁定测试 runner / Pester                                                [x] 已落地
   ↓
-P0-4  Codex CLI 当前版本 regression                                            [ ] 待执行
+P0-4  Codex CLI 当前版本 regression（profile-suffixed role B4）                [x] 已通过（2026-08-15）
   ↓
-P0-5  Codex Desktop 独立 B4                                                    [ ] 待执行
+P0-5  Codex Desktop 独立 B4（runtime 层；UI 层用户确认）                        [x] 已通过（2026-08-15）
   ↓
 P1-1  capability 状态语义修正
   ↓
@@ -325,8 +325,8 @@ P2    README / quickstart / release 文档收口
 
 本计划不是完成几个模块就结束。下一阶段全部完成时，应满足：
 
-- [ ] DeepSeek 在 Codex CLI 的已验证组合继续通过 B4 regression；
-- [ ] DeepSeek 在至少一个 Codex Desktop build 下通过独立 B4；
+- [x] DeepSeek 在 Codex CLI 的已验证组合继续通过 B4 regression；
+- [x] DeepSeek 在至少一个 Codex Desktop build 下通过独立 B4；
 - [ ] native-provider 有稳定用户入口：list/show/status/configure/credential/install/doctor/dispatch/uninstall；
 - [ ] 用户只提供 Base URL、Model ID、API Key，安装了 `relay-agent` skill 的 Agent 即可按照 skill 合同自动完成配置；
 - [ ] API Key 不进入命令行参数、普通配置、日志或 JSON 输出；
