@@ -143,13 +143,13 @@ relay worker dispatch --auto -- <task>
 
 ### 必做项
 
-- [ ] 明确项目支持的 Pester major 版本（建议 `>=5 <7` 或直接锁具体 major）；
-- [ ] 提供统一测试入口，例如 `scripts/test.ps1`；
-- [ ] runner 启动时检查 Pester 版本，不满足立即输出明确错误；
-- [ ] CI / release checklist 统一调用同一个 runner；
-- [ ] native-provider、external-cli、host adapter、dispatch 测试都走统一入口；
-- [ ] 测试 evidence 记录 PowerShell、Pester、OS、Codex build；
-- [ ] README 中“89 项确定性测试”等数字改为由当前可重复 runner 产生，不手工维护陈旧数字。
+- [x] 明确项目支持的 Pester major 版本（建议 `>=5 <7` 或直接锁具体 major）——已锁定 `>=5 <7`，当前验证版本 Pester 6.1.0 / pwsh 7.6.4；
+- [x] 提供统一测试入口，例如 `scripts/test.ps1`；
+- [x] runner 启动时检查 Pester 版本，不满足立即输出明确错误；
+- [x] CI / release checklist 统一调用同一个 runner；
+- [x] native-provider、external-cli、host adapter、dispatch 测试都走统一入口；
+- [x] 测试 evidence 记录 PowerShell、Pester、OS、Codex build；
+- [x] README 中“89 项确定性测试”等数字改为由当前可重复 runner 产生，不手工维护陈旧数字（现为 91 项，`scripts/test.ps1 -ExportEvidence` 输出）。
 
 ### 退出门槛
 

@@ -45,7 +45,7 @@ Describe "Doctor: available vs blocking capabilities" {
         $report | Should -Match "custom_agent_spawn"
         $report | Should -Match "No third-party paid call was made"
     }
-    It "evidence path follows <date>-codex-<version>-<host>.json" {
+    It "evidence path follows date-codex-version-host.json pattern" {
         $path = Get-CodexCapabilityEvidencePath -Root (Join-Path ([System.IO.Path]::GetTempPath()) "relay-evidence")
         $path | Should -Match "codex-.*-win32\.json$"
     }

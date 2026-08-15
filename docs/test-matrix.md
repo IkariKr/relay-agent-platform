@@ -28,7 +28,7 @@
 
 ### 1.2 测试框架与 stub CLI 夹具
 
-- 测试运行器：**Pester v5 + Invoke-Pester**，作为 deterministic unit/contract 与 deterministic process 的统一入口。现有 `tests/thin-relay-contract.ps1` 手写断言可迁入 Pester 或保留为轻量冒烟入口，但新增测试一律走 Pester v5。
+- 测试运行器：统一入口 `scripts/test.ps1`（要求 pwsh 7.2+ 与 Pester `>=5 <7`，当前锁定 Pester 6.1.0）；runner 启动时校验 PowerShell / Pester 版本，不满足立即输出明确错误。`scripts/test.ps1 -ExportEvidence` 会把 PowerShell、Pester、OS、Codex build 与结果计数写入 `docs/evidence/test-run/`。CI 与 release checklist 只调用该 runner。现有 `tests/thin-relay-contract.ps1` 手写断言保留为轻量冒烟入口，新增测试一律走 Pester v5+。
 - stub CLI fixture：`tests/fixtures/stub-cli/` 提供 `opencode.cmd` / `claude.cmd` / `agy.cmd` 三个薄启动器，统一转调同一个 `stub-cli.ps1`；通过 `STUB_EXIT_CODE`、`STUB_STDOUT_LINE`、`STUB_STDERR_LINE` 环境变量控制输出与退出码。测试把 fixture 目录前置到 `$env:PATH`，从而覆盖命令解析、真实进程 spawn、stdout/stderr 分流、exit code、`--log-dir` mirror、CLI missing 与 redaction（TR-PROC-* / TR-LOG-* / TR-ONCE-* / TR-GIT-* / TR-SEC-*）。
 - stub fixture 只存在于测试上下文，不得进入 package 生成物。
 

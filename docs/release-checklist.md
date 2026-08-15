@@ -55,12 +55,14 @@ From the repo root:
 ```powershell
 .\scripts\build-packages.ps1
 .\scripts\validate-packages.ps1
+.\scripts\test.ps1 -ExportEvidence
 ```
 
 Expected result:
 
 - package generation succeeds
 - validation ends with `Package validation passed.`
+- deterministic suite passes and writes an evidence artifact to `docs/evidence/test-run/` (records PowerShell, Pester, OS and Codex build)
 
 ## Release Smoke Tests
 
