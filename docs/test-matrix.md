@@ -148,7 +148,19 @@ Hook 只有在 B2 evidence 证明 native spawn/lifecycle 可用、task delivery 
 | NP-CRED-006 | credential remove 只删该 profile 拥有的 secret | deterministic | 必须 |
 | NP-CRED-007 | 失败异常不包含输入 secret | deterministic | 必须 |
 
-NP-CRED-003（不存在 `--api-key <value>` 参数）与 NP-CLI-* / NP-SKILL-* / NP-PKG-* / NP-GEN-* / NP-RUN-* 由 onboarding P0-B/C/D/E 阶段补充。
+NP-CRED-003（不存在 `--api-key <value>` 参数）与 NP-CLI-* / NP-SKILL-* / NP-PKG-* / NP-RUN-* 由 onboarding P0-B/C/D/E 阶段补充。
+
+## 8.1 Generation / ownership（onboarding P0-B）
+
+| ID | 用例 | 类型 | Gate |
+|---|---|---|---|
+| NP-GEN-001 | pack + profile 可生成合法 Codex agent overlay | deterministic | 必须 |
+| NP-GEN-002 | 生成配置使用 profile 的 Base URL / Model ID | deterministic | 必须 |
+| NP-GEN-003 | API Key 只以 credential source 引用出现，值不出现在生成物 | deterministic | 必须 |
+| NP-GEN-004 | 不改变主 Agent 全局 model/provider（config.toml byte-identical） | deterministic | 必须 |
+| NP-GEN-005 | 遇到非 Relay-owned 同名配置时 fail closed | deterministic | 必须 |
+| NP-GEN-006 | uninstall 只清理 Relay-owned state | deterministic | 必须 |
+| NP-GEN-007 | profile update 后可重生成配置 | deterministic | 必须 |
 
 ## 9. 测试所有权
 
