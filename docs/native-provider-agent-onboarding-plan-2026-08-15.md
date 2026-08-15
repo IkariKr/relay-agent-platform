@@ -664,6 +664,18 @@ Relay 生成的 provider section 必须具备可追踪 ownership。
 
 该变化必须先由新的 runtime evidence 证明必要性并补 ownership tests。
 
+### 7.3 Profile-suffixed agent role 的 evidence 边界
+
+当前多 profile 注册使用稳定且唯一的 role：
+
+```text
+<worker-id>--<profile-id>
+```
+
+例如 `deepseek-v4-flash--personal-nexus`。2026-08-15 在 **codex-cli 0.147.0** 上做了零付费配置加载探测：临时 `config.toml` 使用 `[agents.deepseek-v4-flash--profile-test]`，`codex doctor --json` 返回 `config.load = ok` / `config.toml parse = ok`，因此可以确认双连字符 role 至少被当前 Codex 配置加载器接受。证据记录：`docs/evidence/transport/profile-suffixed-agent-role-config-load-2026-08-15.md`。
+
+但这不能替代 native child runtime evidence。现有 B4 paid smoke 验证的是 `[agents.deepseek-v4-flash]`，尚未覆盖 profile-suffixed role 的 `spawn_agent` / identity / wait 全链路。因此 P0-4 Codex CLI regression 必须把 `<worker-id>--<profile-id>` 作为显式验收形态；在该 regression 完成前，不把旧 B4 的 runtime claim 自动扩展到新的 role 命名。默认 profile role 暂不为了缩短字符串改名，避免在没有兼容性收益证据时引入 role migration 与 ownership 复杂度。
+
 ---
 
 ## 8. 安装后 Agent 自发现
@@ -701,16 +713,23 @@ DeepSeek worker 可以作为该 skill 中的内置 worker pack，也可以未来
 ```text
 WORKER_NOT_FOUND
 PROFILE_NOT_FOUND
+PROFILE_SELECTION_REQUIRED
 BASE_URL_INVALID
 MODEL_ID_MISSING
 CREDENTIAL_MISSING
 CREDENTIAL_WRITE_UNSUPPORTED
+AGENT_REGISTRATION_MISSING
 PROVIDER_PROFILE_CONFLICT
 HOST_CAPABILITY_BLOCKED
 GENERATED_CONFIG_CONFLICT
 ```
 
-skill 中定义 Agent 的恢复动作，避免 Agent 自己发明修复方法。
+skill 中定义 Agent 的恢复动作，避免 Agent 自己发明修复方法。尤其新增的运行时状态必须同步到 Agent 协议：
+
+| error_code | Agent 恢复动作 |
+|---|---|
+| `PROFILE_SELECTION_REQUIRED` | 读取返回的 `profile_ids`，选择目标 profile，后续 `status / doctor / dispatch` 显式传 `--profile <profile-id>` |
+| `AGENT_REGISTRATION_MISSING` | 对同一 worker/profile 重跑 `configure`，由 Relay 重建 owned `[agents.*]` 注册；不要指导用户手改 TOML |
 
 ---
 
@@ -799,7 +818,8 @@ scripts/
 - [ ] NP-CRED-004：stdout/stderr/JSON 不含 secret；
 - [ ] NP-CRED-005：doctor 只报告 presence；
 - [ ] NP-CRED-006：credential remove 只删除该 profile 拥有的 secret；
-- [ ] NP-CRED-007：失败异常不包含输入 secret。
+- [ ] NP-CRED-007：失败异常不包含输入 secret；
+- [ ] NP-CRED-008：未知/拼错 option 即使携带 `=value`，错误消息也不回显 value。
 
 ### 11.3 Generation / ownership
 
@@ -808,7 +828,9 @@ scripts/
 - [ ] NP-GEN-003：API Key 只以 credential source 引用出现；
 - [ ] NP-GEN-004：不改变主 Agent 全局 model/provider；
 - [ ] NP-GEN-005：遇到非 Relay-owned 同名配置时停止；
-- [ ] NP-GEN-006：uninstall 只清理 Relay-owned state。
+- [ ] NP-GEN-006：uninstall 只清理 Relay-owned state；
+- [ ] NP-GEN-009：`[agents.*]` 注册 install→remove 后 BOM/行尾/原始字节完全恢复；
+- [ ] NP-GEN-010：role 冲突检测遵守 TOML key 大小写敏感语义。
 
 ### 11.4 CLI / Agent contract
 
@@ -816,9 +838,12 @@ scripts/
 - [ ] NP-CLI-002：缺失字段返回稳定 machine status + missing list；
 - [ ] NP-CLI-003：non-interactive 不偷偷 prompt；
 - [ ] NP-CLI-004：未 ready 的 dispatch fail closed；
+- [ ] NP-CLI-006：doctor 对未知 worker 报 `WORKER_NOT_FOUND` / manifest missing；
+- [ ] NP-CLI-007：同 worker 多 profile 且未显式选择时返回 `PROFILE_SELECTION_REQUIRED`；
 - [ ] NP-SKILL-001：generated `relay-agent/SKILL.md` 包含 native-provider discovery/config/execute 流程；
 - [ ] NP-SKILL-002：skill 明确禁止 command-line API key；
 - [ ] NP-SKILL-003：skill 描述能被“配置第三方 native subagent”意图发现；
+- [ ] NP-SKILL-005：skill 为 `PROFILE_SELECTION_REQUIRED` / `AGENT_REGISTRATION_MISSING` 定义明确恢复动作；
 - [ ] NP-PKG-001：干净环境只安装 `relay-agent` package 后即可运行 `worker list/configure/doctor`。
 
 ### 11.5 Runtime
@@ -833,7 +858,7 @@ scripts/
 
 ## 12. 分阶段实施顺序
 
-> 状态（2026-08-15）：P0-A 至 P0-E 已全部落地并随 `scripts/test.ps1` 的 deterministic suite 验证（137 项，含 NP-PROFILE/NP-CRED/NP-GEN/NP-CLI/NP-SKILL/NP-PKG/NP-E2E）。P0-E 的 paid native child 验收保留给真实宿主 + 显式授权。
+> 状态（2026-08-15）：P0-A 至 P0-E 已全部落地并随 `scripts/test.ps1` 的 deterministic suite 验证（147 项，含 NP-PROFILE/NP-CRED/NP-GEN/NP-CLI/NP-SKILL/NP-PKG/NP-E2E）。2026-08-15 两轮 review 后补齐了 Relay-owned `[agents.*]` 显式注册、多 profile 选择 fail-closed、CLI secret 等号/未知 option 防泄漏、doctor 未知 worker 状态、TOML-breaking 输入校验、config.toml BOM/字节级 round-trip、大小写敏感 role 冲突检测，以及新增错误码的 Agent 恢复协议。P0-E 的 paid native child 验收仍保留给真实宿主 + 显式授权。
 
 ### P0-A：Profile 与 credential contract `[x] 已落地`
 

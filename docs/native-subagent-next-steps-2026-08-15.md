@@ -67,7 +67,7 @@ docs/evidence/transport/b4-native-child-desktop-<date>.jsonl
 
 > 详细设计见 [`native-provider-agent-onboarding-plan-2026-08-15.md`](native-provider-agent-onboarding-plan-2026-08-15.md)。该设计是本节的 P0 实施细化，目标是让安装 `relay-agent` skill 的任意 Agent 都能自行发现配置状态、向用户只收集 Base URL / Model ID / API Key，并自动完成安全配置、doctor 与执行准备。
 
-> 状态（2026-08-15）：P0-1/P0-2/P0-3 已落地（`relay worker` 命令面 + profile/credential contract + 锁定 Pester runner，137 项确定性测试，`scripts/test.ps1` 复现）。P0-4（Codex CLI 当前版本 regression）与 P0-5（Desktop 独立 B4）待执行。
+> 状态（2026-08-15）：P0-1/P0-2/P0-3 已落地（`relay worker` 命令面 + profile/credential contract + 锁定 Pester runner，147 项确定性测试，`scripts/test.ps1` 复现）。P0-4（Codex CLI 当前版本 regression，需覆盖 profile-suffixed `<worker-id>--<profile-id>` agent role 的 native child 全链路）与 P0-5（Desktop 独立 B4）待执行。
 
 ### 当前问题
 

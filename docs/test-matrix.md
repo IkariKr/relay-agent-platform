@@ -159,7 +159,11 @@ NP-CRED-003（不存在 `--api-key <value>` 参数）与 NP-CLI-* / NP-SKILL-* /
 | NP-CLI-003 | non-interactive 模式绝不偷偷 prompt | deterministic | 必须 |
 | NP-CLI-004 | 未 ready 的 dispatch fail closed 并给出 next_action | deterministic | 必须 |
 | NP-CLI-005 | dispatch 尊重显式 worker id（未知 worker → WORKER_NOT_FOUND） | deterministic | 必须 |
+| NP-CLI-006 | doctor 对未知 worker 报 `WORKER_NOT_FOUND`，不得误报 manifest=ok | deterministic | 必须 |
+| NP-CLI-007 | 同 worker 多 profile 且未显式选择时 fail closed（`PROFILE_SELECTION_REQUIRED`） | deterministic | 必须 |
 | NP-CRED-003 | 不存在 `--api-key <value>` 参数（内联 key 被拒绝） | deterministic | 必须 |
+| NP-CRED-007 | `--api-key=<secret>` 等号形式也安全拒绝，异常/输出不回显 secret | deterministic | 必须 |
+| NP-CRED-008 | 拼写错误/未知 option 即使携带 `=value` 也不在错误消息中回显 value | deterministic | 必须 |
 | NP-CLI-E2E | configure(stdin credential) → status ready → doctor → dispatch-ready → credential status/remove → uninstall --profile 全流程无付费调用、无 secret 泄漏 | deterministic | 必须 |
 
 ## 8.1 Generation / ownership（onboarding P0-B）
@@ -169,10 +173,13 @@ NP-CRED-003（不存在 `--api-key <value>` 参数）与 NP-CLI-* / NP-SKILL-* /
 | NP-GEN-001 | pack + profile 可生成合法 Codex agent overlay | deterministic | 必须 |
 | NP-GEN-002 | 生成配置使用 profile 的 Base URL / Model ID | deterministic | 必须 |
 | NP-GEN-003 | API Key 只以 credential source 引用出现，值不出现在生成物 | deterministic | 必须 |
-| NP-GEN-004 | 不改变主 Agent 全局 model/provider（config.toml byte-identical） | deterministic | 必须 |
+| NP-GEN-004 | 只增删 Relay-owned `[agents.*]` 注册段，主 Agent 全局 model/provider 保持不变 | deterministic | 必须 |
 | NP-GEN-005 | 遇到非 Relay-owned 同名配置时 fail closed | deterministic | 必须 |
-| NP-GEN-006 | uninstall 只清理 Relay-owned state | deterministic | 必须 |
+| NP-GEN-006 | uninstall 只清理 Relay-owned state / agent registration | deterministic | 必须 |
 | NP-GEN-007 | profile update 后可重生成配置 | deterministic | 必须 |
+| NP-GEN-008 | 非 Relay-owned 的同名 agent role 冲突时 fail closed | deterministic | 必须 |
+| NP-GEN-009 | `[agents.*]` 注册 install→remove round-trip 保留 UTF-8 BOM/行尾并恢复 config.toml 原始字节 | deterministic | 必须 |
+| NP-GEN-010 | agent role 冲突检测遵守 TOML key 大小写敏感语义（`[AGENTS.x]` 不等于 `[agents.x]`） | deterministic | 必须 |
 
 ## 8.3 Skill protocol & package（onboarding P0-D）
 
@@ -182,6 +189,7 @@ NP-CRED-003（不存在 `--api-key <value>` 参数）与 NP-CLI-* / NP-SKILL-* /
 | NP-SKILL-002 | skill 明确禁止 command-line API key | deterministic | 必须 |
 | NP-SKILL-003 | skill description 能被“配置第三方 native subagent”意图发现 | deterministic | 必须 |
 | NP-SKILL-004 | 专用 external-cli surface 不暴露 native-provider onboarding | deterministic | 必须 |
+| NP-SKILL-005 | generated skill 为 `PROFILE_SELECTION_REQUIRED` / `AGENT_REGISTRATION_MISSING` 提供明确恢复动作 | deterministic | 必须 |
 | NP-PKG-001 | relay-agent package 自包含 registry/contracts/hosts/credentials/generation/cli 与 worker pack | deterministic | 必须 |
 | NP-PKG-002 | 干净 package 树内可直接运行 `worker list --json` | deterministic | 必须 |
 

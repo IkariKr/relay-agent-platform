@@ -82,6 +82,13 @@ function Get-NativeProviderReadiness {
                 missing = @($missing); blocking = @(); next_action = "configure"
             }
         }
+        if ($profiles.Count -gt 1) {
+            return [pscustomobject]@{
+                status = "invalid-config"; error_code = "PROFILE_SELECTION_REQUIRED"; worker_id = $WorkerId
+                profile_ids = @($profiles | ForEach-Object { [string]$_.profile_id } | Sort-Object)
+                missing = @("profile"); blocking = @(); next_action = "status --profile"
+            }
+        }
         $profile = $profiles[0]
     }
     else {
@@ -110,6 +117,7 @@ function Get-NativeProviderReadiness {
 
     $overlayPath = Get-GeneratedOverlayPath -WorkerId $WorkerId -ProfileId ([string]$profile.profile_id) -CodexHome $CodexHome
     $overlayGenerated = (Test-Path -LiteralPath $overlayPath) -and (Test-GeneratedOverlayOwned -Path $overlayPath)
+    $agentRegistered = Test-CodexAgentRegistrationOwned -WorkerId $WorkerId -ProfileId ([string]$profile.profile_id) -CodexHome $CodexHome
 
     $probe = Get-CodexCapabilityProbeResult -LiveEvidenceDir (Get-RepoEvidenceDir)
     $blocking = @(Test-RequiredWorkerCapabilities -ProbeResult $probe)
@@ -121,7 +129,7 @@ function Get-NativeProviderReadiness {
             status = $status; error_code = "INCOMPLETE_CONFIG"; worker_id = $WorkerId
             profile_id = [string]$profile.profile_id; missing = @($missing)
             credential = [pscustomobject]@{ source = $credentialSource; present = $credentialPresent }
-            overlay_generated = $overlayGenerated; blocking = @($blocking); next_action = $next
+            overlay_generated = $overlayGenerated; agent_registered = $agentRegistered; blocking = @($blocking); next_action = $next
         }
     }
     if (-not $overlayGenerated) {
@@ -129,7 +137,15 @@ function Get-NativeProviderReadiness {
             status = "needs-config"; error_code = "OVERLAY_MISSING"; worker_id = $WorkerId
             profile_id = [string]$profile.profile_id; missing = @("overlay")
             credential = [pscustomobject]@{ source = $credentialSource; present = $credentialPresent }
-            overlay_generated = $false; blocking = @($blocking); next_action = "configure"
+            overlay_generated = $false; agent_registered = $agentRegistered; blocking = @($blocking); next_action = "configure"
+        }
+    }
+    if (-not $agentRegistered) {
+        return [pscustomobject]@{
+            status = "provider-misaligned"; error_code = "AGENT_REGISTRATION_MISSING"; worker_id = $WorkerId
+            profile_id = [string]$profile.profile_id; missing = @("agent_registration")
+            credential = [pscustomobject]@{ source = $credentialSource; present = $credentialPresent }
+            overlay_generated = $overlayGenerated; agent_registered = $false; blocking = @($blocking); next_action = "configure"
         }
     }
     if ($blocking.Count -gt 0) {
@@ -137,7 +153,7 @@ function Get-NativeProviderReadiness {
             status = "host-blocked"; error_code = "HOST_CAPABILITY_BLOCKED"; worker_id = $WorkerId
             profile_id = [string]$profile.profile_id
             credential = [pscustomobject]@{ source = $credentialSource; present = $credentialPresent }
-            overlay_generated = $overlayGenerated; blocking = @($blocking); next_action = $null
+            overlay_generated = $overlayGenerated; agent_registered = $agentRegistered; blocking = @($blocking); next_action = $null
         }
     }
 
@@ -147,7 +163,9 @@ function Get-NativeProviderReadiness {
         provider_id = [string]$profile.provider_id
         base_url = $baseUrl; model_id = $modelId
         credential = [pscustomobject]@{ source = $credentialSource; present = $credentialPresent }
-        overlay_generated = $overlayGenerated; blocking = @(); next_action = "dispatch"
+        overlay_generated = $overlayGenerated; agent_registered = $agentRegistered
+        agent_role = Get-CodexAgentRoleName -WorkerId $WorkerId -ProfileId ([string]$profile.profile_id)
+        blocking = @(); next_action = "dispatch"
     }
 }
 
@@ -312,7 +330,7 @@ function Invoke-WorkerConfigure {
         }
         else {
             $profile = Update-ProviderProfile -ProfileId $ProfileId `
-                -BaseUrl $effectiveBaseUrl -ModelId $effectiveModelId -CodexHome $CodexHome
+                -BaseUrl $effectiveBaseUrl -ModelId $effectiveModelId -ProviderId $ProviderAlias -CodexHome $CodexHome
         }
     }
     catch {
@@ -334,9 +352,10 @@ function Invoke-WorkerConfigure {
 
     try {
         $null = New-CodexAgentOverlay -WorkerId $WorkerId -ProfileId $ProfileId -CodexHome $CodexHome -ProviderAlias $ProviderAlias
+        $null = Install-CodexAgentRegistration -WorkerId $WorkerId -ProfileId $ProfileId -CodexHome $CodexHome
     }
     catch {
-        if ($_.Exception.Message -match "not relay-agent owned") {
+        if ($_.Exception.Message -match "not relay-agent owned|generated config conflict") {
             return (New-WorkerCliError -Code "GENERATED_CONFIG_CONFLICT" -Message $_.Exception.Message)
         }
         throw
@@ -417,15 +436,19 @@ function Invoke-WorkerDoctor {
     $probe = Get-CodexCapabilityProbeResult -LiveEvidenceDir (Get-RepoEvidenceDir)
     $credentialPresent = if ($ready.PSObject.Properties.Name -contains "credential") { $ready.credential.present } else { $false }
     $overlayGenerated = if ($ready.PSObject.Properties.Name -contains "overlay_generated") { $ready.overlay_generated } else { $false }
+    $agentRegistered = if ($ready.PSObject.Properties.Name -contains "agent_registered") { $ready.agent_registered } else { $false }
     $data = [ordered]@{
         status = $ready.status
+        error_code = $ready.error_code
         worker_id = $WorkerId
+        profile_id = if ($ready.PSObject.Properties.Name -contains "profile_id") { $ready.profile_id } else { $null }
         paid_call_performed = $false
         checks = [ordered]@{
-            worker_manifest = "ok"
-            profile = if ($ready.error_code -eq "PROFILE_NOT_FOUND") { "missing" } else { "ok" }
+            worker_manifest = if ($ready.error_code -eq "WORKER_NOT_FOUND") { "missing" } else { "ok" }
+            profile = if ($ready.error_code -in @("PROFILE_NOT_FOUND", "PROFILE_SELECTION_REQUIRED")) { "missing" } else { "ok" }
             credential = if ($credentialPresent) { "present" } else { "missing" }
             overlay_generated = $overlayGenerated
+            agent_registration = if ($agentRegistered) { "registered" } else { "missing" }
             host_capability = if ($ready.blocking.Count -eq 0) { "ok" } else { "blocked" }
         }
         blocking = @($ready.blocking)
@@ -459,6 +482,7 @@ function Invoke-WorkerDispatch {
         runtime_type = "native-provider"
         profile_id = [string]$ready.profile_id
         provider_alias = [string]$ready.provider_id
+        agent_role = [string]$ready.agent_role
         model_id = [string]$ready.model_id
         data_boundary = (Get-WorkerDescriptor -WorkerId $WorkerId).data_boundary
         execution = "codex-native-child (spawn_agent managed by the Codex host; relay does not implement a second child lifecycle)"
@@ -485,10 +509,11 @@ function Invoke-WorkerUninstall {
             if ([string]$profile.worker_id -ne $WorkerId) {
                 return (New-WorkerCliError -Code "PROFILE_NOT_FOUND" -Message "profile '$ProfileId' is bound to worker '$($profile.worker_id)'")
             }
+            Remove-CodexAgentRegistration -WorkerId $WorkerId -ProfileId $ProfileId -CodexHome $CodexHome | Out-Null
             Remove-GeneratedOverlay -WorkerId $WorkerId -ProfileId $ProfileId -CodexHome $CodexHome | Out-Null
             Remove-Credential -Source ([string]$profile.credential_source) -Scope $CredentialScope | Out-Null
             Remove-ProviderProfile -ProfileId $ProfileId -CodexHome $CodexHome | Out-Null
-            $removed += @("overlay", "profile", "credential")
+            $removed += @("agent-registration", "overlay", "profile", "credential")
         }
         catch { return (New-WorkerCliError -Code "PROFILE_NOT_FOUND" -Message "provider profile '$ProfileId' not found") }
     }
@@ -496,7 +521,9 @@ function Invoke-WorkerUninstall {
         # 整个 worker：pack staging + 所有 Relay-owned overlay（profile 与 credential 保留，单独按 profile 卸载）
         Uninstall-WorkerPack -WorkerId $WorkerId | Out-Null
         foreach ($p in @(Get-ProviderProfiles -WorkerId $WorkerId -CodexHome $CodexHome)) {
+            Remove-CodexAgentRegistration -WorkerId $WorkerId -ProfileId ([string]$p.profile_id) -CodexHome $CodexHome | Out-Null
             Remove-GeneratedOverlay -WorkerId $WorkerId -ProfileId ([string]$p.profile_id) -CodexHome $CodexHome | Out-Null
+            $removed += ("agent-registration:" + [string]$p.profile_id)
             $removed += ("overlay:" + [string]$p.profile_id)
         }
         $removed += "pack-staging"
@@ -560,14 +587,15 @@ function Invoke-WorkerCommand {
             "^(--profile|--base-url|--model|--provider-alias|--codex-home)$" {
                 Get-WorkerOptionValue -Tokens $Tokens -Index ([ref]$i) -Flag $token -Options ([ref]$options)
             }
-            # 明确禁止：API Key 不得作为命令行参数出现
-            "^(--api-key|-k|--api-key-stdin=.*)$" {
-                if ($token -like "--api-key*" -and $token -ne "--api-key-stdin") {
-                    throw "relay worker: --api-key <value> is forbidden; use --api-key-stdin or the masked prompt"
-                }
+            # 明确禁止：API Key 不得作为命令行参数出现。等号形式也必须在进入
+            # generic unknown-option 分支前拦截，否则错误文本会把 secret 原样回显。
+            "^((--api-key|-k)(=.*)?|--api-key-stdin=.*)$" {
+                throw "relay worker: --api-key <value> is forbidden; use --api-key-stdin or the masked prompt"
             }
             default {
-                if ($token -match "^[-/]") { throw "relay worker: unknown option '$token'" }
+                # unknown option 可能是用户把 secret 拼进了拼写错误的参数（例如
+                # --apikey=<value>）。错误消息绝不回显原 token，避免 transcript 泄漏。
+                if ($token -match "^[-/]") { throw "relay worker: unknown option; check command syntax" }
                 $positional.Add($token)
             }
         }

@@ -1,6 +1,6 @@
 # CodexProviderConfigGenerator.Tests.ps1 — overlay 生成与 ownership 契约测试。
 # Contract tests for generated Codex overlays (NP-GEN-*), per onboarding plan §11.3.
-# 全部在临时 CODEX_HOME 上执行；主 config.toml 不被修改；无任何付费调用。
+# 全部在临时 CODEX_HOME 上执行；只允许增删 Relay-owned [agents.*] 注册段，主模型/provider 保持不变；无任何付费调用。
 BeforeAll {
     $repoRoot = Split-Path -Parent $PSScriptRoot
     Import-Module (Join-Path $repoRoot "platform\generation\CodexProviderConfigGenerator.psm1") -Force
@@ -65,13 +65,18 @@ Describe "NP-GEN: overlay generation and ownership" {
         }
     }
 
-    It "NP-GEN-004: main config.toml stays byte-identical (global model/provider untouched)" {
-        $original = Get-Content -Raw -LiteralPath $script:mainConfig
+    It "NP-GEN-004: agent registration is Relay-owned and leaves global model/provider untouched" {
         $null = New-CodexAgentOverlay -WorkerId $script:workerId -ProfileId $script:profileId -CodexHome $script:codexHome
+        $registration = Install-CodexAgentRegistration -WorkerId $script:workerId -ProfileId $script:profileId -CodexHome $script:codexHome
+        $registration.role | Should -Be "$($script:workerId)--$($script:profileId)"
+        Test-CodexAgentRegistrationOwned -WorkerId $script:workerId -ProfileId $script:profileId -CodexHome $script:codexHome | Should -BeTrue
+
         $after = Get-Content -Raw -LiteralPath $script:mainConfig
-        $after | Should -Be $original
         $after | Should -Match "model_provider = `"openai`""
         $after | Should -Match "model = `"gpt-main`""
+        $after | Should -Match ("\[agents\." + [regex]::Escape($registration.role) + "\]")
+        $after | Should -Match "relay-agent agent-registration begin"
+        $after | Should -Match "config_file = `".*relay/generated/agents/"
     }
 
     It "NP-GEN-005: non-relay file at the target path stops generation (fail closed)" {
@@ -86,11 +91,75 @@ Describe "NP-GEN: overlay generation and ownership" {
     }
 
     It "NP-GEN-006: uninstall removes only relay-owned generated state" {
+        Remove-CodexAgentRegistration -WorkerId $script:workerId -ProfileId $script:profileId -CodexHome $script:codexHome | Out-Null
         Remove-GeneratedOverlay -WorkerId $script:workerId -ProfileId $script:profileId -CodexHome $script:codexHome | Out-Null
         (Test-Path -LiteralPath $script:overlayPath) | Should -BeFalse
-        # profile 与主配置保留
+        Test-CodexAgentRegistrationOwned -WorkerId $script:workerId -ProfileId $script:profileId -CodexHome $script:codexHome | Should -BeFalse
+        # profile 与主配置保留，且全局模型/provider 不受影响
         (Test-Path -LiteralPath (Get-ProfileFilePath -ProfileId $script:profileId -CodexHome $script:codexHome)) | Should -BeTrue
         (Test-Path -LiteralPath $script:mainConfig) | Should -BeTrue
+        $main = Get-Content -Raw -LiteralPath $script:mainConfig
+        $main | Should -Match "model_provider = `"openai`""
+        $main | Should -Match "model = `"gpt-main`""
+    }
+
+    It "NP-GEN-008: non-Relay agent role collision fails closed" {
+        $conflictProfile = "gen-conflict-" + $script:suffix
+        $null = New-ProviderProfile -WorkerId $script:workerId -ProfileId $conflictProfile `
+            -BaseUrl "https://conflict.example.com/v1" -ModelId $script:modelId -CodexHome $script:codexHome
+        $null = New-CodexAgentOverlay -WorkerId $script:workerId -ProfileId $conflictProfile -CodexHome $script:codexHome
+        $role = Get-CodexAgentRoleName -WorkerId $script:workerId -ProfileId $conflictProfile
+        Add-Content -LiteralPath $script:mainConfig -Value "`n[agents.$role]`ndescription = `"external owner`""
+        { Install-CodexAgentRegistration -WorkerId $script:workerId -ProfileId $conflictProfile -CodexHome $script:codexHome } |
+            Should -Throw "*not relay-agent owned*"
+    }
+
+    It "NP-GEN-009: registration install/remove preserves BOM and restores config bytes exactly" {
+        $roundTripHome = Join-Path $script:testRoot ("bom-home-" + [guid]::NewGuid().ToString("N"))
+        New-Item -ItemType Directory -Path $roundTripHome -Force | Out-Null
+        try {
+            $configPath = Join-Path $roundTripHome "config.toml"
+            # 故意不带最终换行，同时使用 CRLF + UTF-8 BOM，验证 Relay 为注册块补的
+            # 前置换行也属于 owned patch，卸载后必须连同 BOM/行尾一起字节级还原。
+            $originalText = "[model]`r`nmodel_provider = `"openai`"`r`nmodel = `"gpt-main`""
+            [System.IO.File]::WriteAllText($configPath, $originalText, [System.Text.UTF8Encoding]::new($true))
+            $before = [System.IO.File]::ReadAllBytes($configPath)
+
+            Install-CodexAgentRegistration -WorkerId $script:workerId -ProfileId "bom-roundtrip" -CodexHome $roundTripHome | Out-Null
+            Remove-CodexAgentRegistration -WorkerId $script:workerId -ProfileId "bom-roundtrip" -CodexHome $roundTripHome | Out-Null
+
+            $after = [System.IO.File]::ReadAllBytes($configPath)
+            [BitConverter]::ToString($after[0..2]) | Should -Be "EF-BB-BF"
+            [Convert]::ToBase64String($after) | Should -Be ([Convert]::ToBase64String($before))
+        }
+        finally {
+            Remove-Item -LiteralPath $roundTripHome -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It "NP-GEN-010: role collision detection respects TOML key case sensitivity" {
+        $caseHome = Join-Path $script:testRoot ("case-home-" + [guid]::NewGuid().ToString("N"))
+        New-Item -ItemType Directory -Path $caseHome -Force | Out-Null
+        try {
+            $profileId = "case-profile"
+            $role = Get-CodexAgentRoleName -WorkerId $script:workerId -ProfileId $profileId
+            $configPath = Join-Path $caseHome "config.toml"
+            [System.IO.File]::WriteAllText($configPath, "[AGENTS.$role]`ndescription = `"external owner`"`n")
+
+            { Install-CodexAgentRegistration -WorkerId $script:workerId -ProfileId $profileId -CodexHome $caseHome } |
+                Should -Not -Throw
+            $withRelay = [System.IO.File]::ReadAllText($configPath)
+            $withRelay.Contains("[AGENTS.$role]") | Should -BeTrue
+            $withRelay.Contains("[agents.$role]") | Should -BeTrue
+
+            Remove-CodexAgentRegistration -WorkerId $script:workerId -ProfileId $profileId -CodexHome $caseHome | Out-Null
+            $after = [System.IO.File]::ReadAllText($configPath)
+            $after.Contains("[AGENTS.$role]") | Should -BeTrue
+            $after.Contains("[agents.$role]") | Should -BeFalse
+        }
+        finally {
+            Remove-Item -LiteralPath $caseHome -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 
     It "NP-GEN-007: regenerate after profile update picks up new values" {

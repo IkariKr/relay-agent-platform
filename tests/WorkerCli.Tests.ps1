@@ -84,6 +84,75 @@ Describe "NP-CLI: worker command surface with --json contract" {
             "--json", "--codex-home", $script:codexHome) } | Should -Throw "*--api-key <value> is forbidden*"
     }
 
+    It "NP-CRED-007: api-key equals syntax is rejected without echoing the secret" {
+        $inlineSecret = "sk-inline-" + [guid]::NewGuid().ToString("N")
+        $message = ""
+        try {
+            Invoke-Cli -Tokens @("configure", $script:workerId, "--api-key=$inlineSecret",
+                "--json", "--codex-home", $script:codexHome) | Out-Null
+            throw "expected forbidden api-key syntax to fail"
+        }
+        catch {
+            $message = $_.Exception.Message
+        }
+        $message | Should -Match "--api-key <value> is forbidden"
+        $message | Should -Not -Match [regex]::Escape($inlineSecret)
+    }
+
+    It "NP-CRED-008: unknown option errors never echo an equals-suffixed value" {
+        $sensitiveValue = "sensitive-sentinel-" + [guid]::NewGuid().ToString("N")
+        $message = ""
+        try {
+            Invoke-Cli -Tokens @("configure", $script:workerId, "--apikey=$sensitiveValue",
+                "--json", "--codex-home", $script:codexHome) | Out-Null
+            throw "expected unknown option to fail"
+        }
+        catch {
+            $message = $_.Exception.Message
+        }
+        $message | Should -Match "unknown option"
+        $message | Should -Not -Match [regex]::Escape($sensitiveValue)
+        $message | Should -Not -Match "--apikey="
+    }
+
+    It "NP-CLI-006: doctor reports a missing worker manifest instead of claiming ok" {
+        $r = Invoke-Cli -Tokens @("doctor", "no-such-worker", "--json", "--codex-home", $script:codexHome)
+        $r.ExitCode | Should -Be 0
+        $json = ConvertFrom-CliJson -Output $r.Output
+        $json.status | Should -Be "worker-not-found"
+        $json.error_code | Should -Be "WORKER_NOT_FOUND"
+        $json.checks.worker_manifest | Should -Be "missing"
+    }
+
+    It "NP-CLI-007: multiple profiles require explicit selection and dispatch fails closed" {
+        $profile1 = "multi-a-" + [guid]::NewGuid().ToString("N").Substring(0, 8)
+        $profile2 = "multi-b-" + [guid]::NewGuid().ToString("N").Substring(0, 8)
+        foreach ($profile in @($profile1, $profile2)) {
+            $r = Invoke-Cli -Tokens @("configure", $script:workerId, "--profile", $profile,
+                "--base-url", "https://gateway.example.com/v1", "--model", "deepseek-v4-flash-response",
+                "--non-interactive", "--json", "--codex-home", $script:codexHome)
+            $r.ExitCode | Should -Be 0
+        }
+        try {
+            $status = Invoke-Cli -Tokens @("status", $script:workerId, "--json", "--codex-home", $script:codexHome)
+            $statusJson = ConvertFrom-CliJson -Output $status.Output
+            $statusJson.status | Should -Be "invalid-config"
+            $statusJson.error_code | Should -Be "PROFILE_SELECTION_REQUIRED"
+            @($statusJson.profile_ids) | Should -Contain $profile1
+            @($statusJson.profile_ids) | Should -Contain $profile2
+
+            $dispatch = Invoke-Cli -Tokens @("dispatch", $script:workerId, "--json", "--codex-home", $script:codexHome, "--", "review")
+            $dispatchJson = ConvertFrom-CliJson -Output $dispatch.Output
+            $dispatchJson.status | Should -Be "blocked"
+            $dispatchJson.error_code | Should -Be "PROFILE_SELECTION_REQUIRED"
+        }
+        finally {
+            foreach ($profile in @($profile1, $profile2)) {
+                Invoke-Cli -Tokens @("uninstall", $script:workerId, "--profile", $profile, "--json", "--codex-home", $script:codexHome) | Out-Null
+            }
+        }
+    }
+
     It "NP-CLI-004: dispatch fails closed before configuration is ready" {
         $r = Invoke-Cli -Tokens @("dispatch", $script:workerId, "--json", "--", "review this code")
         $r.ExitCode | Should -Be 0
@@ -119,6 +188,20 @@ Describe "NP-CLI: full configure -> doctor -> dispatch lifecycle (no paid calls)
         $json.paid_call_performed | Should -BeFalse
         # secret 不出现在任何输出
         $r.Output | Should -Not -Match [regex]::Escape($script:secret)
+    }
+
+    It "provider alias update keeps profile, overlay and dispatch identity aligned" {
+        $r = Invoke-Cli -Tokens @("configure", $script:workerId, "--profile", $script:profileId,
+            "--provider-alias", "relay-nexus", "--keep-credential", "--non-interactive", "--json",
+            "--codex-home", $script:codexHome)
+        $r.ExitCode | Should -Be 0
+        $json = ConvertFrom-CliJson -Output $r.Output
+        $json.provider_id | Should -Be "relay-nexus"
+
+        $dispatch = Invoke-Cli -Tokens @("dispatch", $script:workerId, "--profile", $script:profileId,
+            "--json", "--codex-home", $script:codexHome, "--", "identity check")
+        $dispatchJson = ConvertFrom-CliJson -Output $dispatch.Output
+        $dispatchJson.provider_alias | Should -Be "relay-nexus"
     }
 
     It "status --json reports ready when configured with verified host capability" {

@@ -92,6 +92,18 @@ Describe "NP-PROFILE: provider profile contract" {
             -BaseUrl "https://x" -ModelId "m" -CredentialSource "file:/tmp/key" -CodexHome $script:codexHome } |
             Should -Throw "*credential_source*"
     }
+
+    It "NP-PROFILE-008: TOML-breaking provider/model/url values are rejected before generation" {
+        { New-ProviderProfile -WorkerId $script:workerId -ProfileId ("bad-provider-" + $script:suffix) `
+            -BaseUrl "https://example.com/v1" -ModelId "m" -ProviderId 'bad]provider' -CodexHome $script:codexHome } |
+            Should -Throw "*provider_id*"
+        { New-ProviderProfile -WorkerId $script:workerId -ProfileId ("bad-model-" + $script:suffix) `
+            -BaseUrl "https://example.com/v1" -ModelId 'model"injected' -CodexHome $script:codexHome } |
+            Should -Throw "*model_id*"
+        { New-ProviderProfile -WorkerId $script:workerId -ProfileId ("bad-url-inject-" + $script:suffix) `
+            -BaseUrl 'https://example.com/v1"' -ModelId "m" -CodexHome $script:codexHome } |
+            Should -Throw "*base_url*"
+    }
 }
 
 Describe "NP-CRED: credential store contract" {

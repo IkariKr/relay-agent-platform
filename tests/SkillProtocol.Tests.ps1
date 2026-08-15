@@ -38,6 +38,14 @@ Describe "NP-SKILL: generated relay-agent skill carries the Agent protocol" {
         $content | Should -Match "Base URL"
     }
 
+    It "NP-SKILL-005: runtime error codes have explicit Agent recovery actions" {
+        $content = Get-Content -Raw -LiteralPath $script:agentSkill
+        $content | Should -Match "PROFILE_SELECTION_REQUIRED"
+        $content | Should -Match "profile_ids"
+        $content | Should -Match "AGENT_REGISTRATION_MISSING"
+        $content | Should -Match '重跑 `configure`'
+    }
+
     It "dedicated external-cli surfaces do not expose native-provider onboarding" {
         $claude = Get-Content -Raw -LiteralPath $script:claudeSkill
         $claude | Should -Not -Match "Native Provider Workers"

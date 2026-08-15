@@ -62,7 +62,13 @@ function Assert-ProfileSchema {
     if ([string]$Profile.wire_api -ne "responses") { throw "provider profile validation failed: wire_api must be 'responses'" }
     if ([string]$Profile.profile_id -notmatch "^[a-z0-9][a-z0-9-]*$") { throw "provider profile validation failed: invalid profile_id" }
     if ([string]$Profile.worker_id -notmatch "^[a-z0-9][a-z0-9-]*$") { throw "provider profile validation failed: invalid worker_id" }
-    if ([string]$Profile.base_url -notmatch "^https?://") { throw "provider profile validation failed: invalid base_url" }
+    if ([string]$Profile.provider_id -notmatch "^[A-Za-z0-9][A-Za-z0-9_-]*$") { throw "provider profile validation failed: invalid provider_id" }
+    $baseUrl = [string]$Profile.base_url
+    $baseUri = $null
+    if (-not [Uri]::TryCreate($baseUrl, [UriKind]::Absolute, [ref]$baseUri) -or $baseUri.Scheme -notin @("http", "https") -or $baseUrl -match '[\r\n"]') {
+        throw "provider profile validation failed: invalid base_url"
+    }
+    if ([string]$Profile.model_id -match '[\r\n"]') { throw "provider profile validation failed: invalid model_id" }
     if ([string]$Profile.credential_source -notmatch "^env:[A-Za-z_][A-Za-z0-9_]*$") { throw "provider profile validation failed: invalid credential_source" }
     if ([string]$Profile.managed_by -ne "relay-agent") { throw "provider profile validation failed: managed_by must be 'relay-agent'" }
     return $true
@@ -152,11 +158,13 @@ function Update-ProviderProfile {
         [Parameter(Mandatory = $true)][string]$ProfileId,
         [string]$BaseUrl = "",
         [string]$ModelId = "",
+        [string]$ProviderId = "",
         [string]$CodexHome = ""
     )
     $profile = Get-ProviderProfile -ProfileId $ProfileId -CodexHome $CodexHome
     if (-not [string]::IsNullOrWhiteSpace($BaseUrl)) { $profile.base_url = $BaseUrl }
     if (-not [string]::IsNullOrWhiteSpace($ModelId)) { $profile.model_id = $ModelId }
+    if (-not [string]::IsNullOrWhiteSpace($ProviderId)) { $profile.provider_id = $ProviderId }
     $profile.updated_at = (Get-Date).ToUniversalTime().ToString("o")
     $null = Assert-ProfileSchema -Profile $profile
 

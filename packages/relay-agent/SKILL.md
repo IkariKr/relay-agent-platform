@@ -164,7 +164,9 @@ relay worker dispatch deepseek-v4-flash --profile personal-nexus -- <task>
 |---|---|---|
 | WORKER_NOT_FOUND | worker id 不存在 | 运行 `relay worker list --json` 选正确 id |
 | PROFILE_NOT_FOUND | profile 不存在 | 运行 configure 创建 profile |
+| PROFILE_SELECTION_REQUIRED | 同一 worker 有多个 profile，未明确选择 | 读取返回的 `profile_ids`，选择目标 profile，并在后续 `status / doctor / dispatch` 中显式传 `--profile <profile-id>` |
 | INCOMPLETE_CONFIG / OVERLAY_MISSING | 配置不完整 | 按 missing 列表向用户索取字段后重跑 configure |
+| AGENT_REGISTRATION_MISSING | Relay overlay 存在，但 Codex `[agents.*]` 注册缺失 | 对同一 worker/profile 重跑 `configure` 让 Relay 重建 owned 注册；不要指导用户手改 TOML |
 | CREDENTIAL_MISSING | 缺 API Key | 让用户运行 masked `credential set` 或经 stdin 提供 |
 | HOST_CAPABILITY_BLOCKED | 宿主能力未验证 | 不猜测；报告 blocking 列表，等 B4 evidence 或换宿主 |
 | PROVIDER_PROFILE_CONFLICT / GENERATED_CONFIG_CONFLICT | 配置冲突 | 停止并展示冲突信息，不覆盖非 Relay 文件 |
@@ -179,7 +181,9 @@ relay worker dispatch deepseek-v4-flash --profile personal-nexus -- <task>
 ## 只改 Relay 拥有的东西
 
 - profile 与生成的 overlay 都在 Relay 自有目录（`<CODEX_HOME>/relay/...`）；
+- 为让 Codex 真正发现 native worker，Relay 只在主 `config.toml` 中增删带 ownership marker 的 `[agents.*]` 注册段；
 - 绝不修改主 Codex 的全局 `model` / `model_provider`；
+- 非 Relay-owned 的同名 `[agents.*]` 一律 fail closed，不覆盖；
 - 卸载只清理 Relay-owned 状态：
   ```text
   relay worker uninstall <worker-id> --profile <profile-id>
