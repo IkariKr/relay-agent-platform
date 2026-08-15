@@ -130,7 +130,27 @@ Hook 只有在 B2 evidence 证明 native spawn/lifecycle 可用、task delivery 
 - 共用同一 host adapter、capability schema、transport 与 dispatch policy；
 - 若必须修改 core，必须解释是通用 contract 缺口还是 provider 特判，并优先修通用合同。
 
-## 8. 测试所有权
+## 8. Provider Profile & Credential（onboarding P0-A）
+
+| ID | 用例 | 类型 | Gate |
+|---|---|---|---|
+| NP-PROFILE-001 | Base URL / Model ID 可形成有效 profile | deterministic | 必须 |
+| NP-PROFILE-002 | profile 文件不含 secret 值，键名不含 secret 字段 | deterministic | 必须 |
+| NP-PROFILE-003 | 同一 worker 可存在多个 profile | deterministic | 必须 |
+| NP-PROFILE-004 | profile id 冲突 fail closed | deterministic | 必须 |
+| NP-PROFILE-005 | 删除一个 profile 不影响其他 profile | deterministic | 必须 |
+| NP-PROFILE-006 | 禁止 secret 字段被 schema 校验拒绝 | deterministic | 必须 |
+| NP-PROFILE-007 | 非法 base_url / credential_source 被拒绝 | deterministic | 必须 |
+| NP-CRED-001 | stdin secret 输入不回显 | deterministic | 必须 |
+| NP-CRED-002 | stdin 值可非交互设置 credential（env scope） | deterministic | 必须 |
+| NP-CRED-004 | stdout/JSON/文件输出不含 secret | deterministic | 必须 |
+| NP-CRED-005 | presence 报告只有 source + boolean | deterministic | 必须 |
+| NP-CRED-006 | credential remove 只删该 profile 拥有的 secret | deterministic | 必须 |
+| NP-CRED-007 | 失败异常不包含输入 secret | deterministic | 必须 |
+
+NP-CRED-003（不存在 `--api-key <value>` 参数）与 NP-CLI-* / NP-SKILL-* / NP-PKG-* / NP-GEN-* / NP-RUN-* 由 onboarding P0-B/C/D/E 阶段补充。
+
+## 9. 测试所有权
 
 - Thin Relay external-cli：`docs/Archive/thin-relay-v2-sop.md`
 - Worker/native-provider：`docs/codex-native-subagent-roadmap.md`
