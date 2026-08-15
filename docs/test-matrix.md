@@ -150,6 +150,18 @@ Hook 只有在 B2 evidence 证明 native spawn/lifecycle 可用、task delivery 
 
 NP-CRED-003（不存在 `--api-key <value>` 参数）与 NP-CLI-* / NP-SKILL-* / NP-PKG-* / NP-RUN-* 由 onboarding P0-B/C/D/E 阶段补充。
 
+## 8.2 CLI / Agent contract（onboarding P0-C）
+
+| ID | 用例 | 类型 | Gate |
+|---|---|---|---|
+| NP-CLI-001 | worker list/status/configure/doctor/dispatch 支持 `--json` 且字段稳定 | deterministic | 必须 |
+| NP-CLI-002 | 缺失字段返回稳定 machine status + missing list（不 prompt） | deterministic | 必须 |
+| NP-CLI-003 | non-interactive 模式绝不偷偷 prompt | deterministic | 必须 |
+| NP-CLI-004 | 未 ready 的 dispatch fail closed 并给出 next_action | deterministic | 必须 |
+| NP-CLI-005 | dispatch 尊重显式 worker id（未知 worker → WORKER_NOT_FOUND） | deterministic | 必须 |
+| NP-CRED-003 | 不存在 `--api-key <value>` 参数（内联 key 被拒绝） | deterministic | 必须 |
+| NP-CLI-E2E | configure(stdin credential) → status ready → doctor → dispatch-ready → credential status/remove → uninstall --profile 全流程无付费调用、无 secret 泄漏 | deterministic | 必须 |
+
 ## 8.1 Generation / ownership（onboarding P0-B）
 
 | ID | 用例 | 类型 | Gate |
