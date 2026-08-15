@@ -174,6 +174,17 @@ NP-CRED-003（不存在 `--api-key <value>` 参数）与 NP-CLI-* / NP-SKILL-* /
 | NP-GEN-006 | uninstall 只清理 Relay-owned state | deterministic | 必须 |
 | NP-GEN-007 | profile update 后可重生成配置 | deterministic | 必须 |
 
+## 8.3 Skill protocol & package（onboarding P0-D）
+
+| ID | 用例 | 类型 | Gate |
+|---|---|---|---|
+| NP-SKILL-001 | generated `relay-agent/SKILL.md` 包含 native-provider discovery/config/execute 流程 | deterministic | 必须 |
+| NP-SKILL-002 | skill 明确禁止 command-line API key | deterministic | 必须 |
+| NP-SKILL-003 | skill description 能被“配置第三方 native subagent”意图发现 | deterministic | 必须 |
+| NP-SKILL-004 | 专用 external-cli surface 不暴露 native-provider onboarding | deterministic | 必须 |
+| NP-PKG-001 | relay-agent package 自包含 registry/contracts/hosts/credentials/generation/cli 与 worker pack | deterministic | 必须 |
+| NP-PKG-002 | 干净 package 树内可直接运行 `worker list --json` | deterministic | 必须 |
+
 ## 9. 测试所有权
 
 - Thin Relay external-cli：`docs/Archive/thin-relay-v2-sop.md`

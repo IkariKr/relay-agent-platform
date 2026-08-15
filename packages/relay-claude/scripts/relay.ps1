@@ -37,11 +37,11 @@ function Get-RelayOptionValue {
 }
 
 if ($args.Count -lt 1) {
-    throw "relay: a command is required (run | route | doctor)"
+    throw "relay: a command is required (run | route | doctor | worker)"
 }
 $command = $args[0]
-if ($command -notin @("run", "route", "doctor")) {
-    throw "relay: unknown command '$command' (supported: run, route, doctor)"
+if ($command -notin @("run", "route", "doctor", "worker")) {
+    throw "relay: unknown command '$command' (supported: run, route, doctor, worker)"
 }
 $rest = @()
 if ($args.Count -gt 1) {
@@ -49,6 +49,15 @@ if ($args.Count -gt 1) {
     # Avoid the if-statement unwrapping a single-element array into a scalar.
     $slice = $args[1..($args.Count - 1)]
     $rest = @($slice)
+}
+
+# worker 命令面由 WorkerCli 自持解析（选项集与 run/route/doctor 不同），
+# 在通用参数解析循环之前拦截，避免 --profile 等选项被当作未知参数。
+# The worker command surface is parsed by WorkerCli (different option set);
+# intercept before the generic parse loop so --profile etc. are not rejected.
+if ($command -eq "worker") {
+    Import-Module (Join-Path $PSScriptRoot "..\platform\cli\WorkerCli.psm1") -Force
+    exit (Invoke-WorkerCommand -Tokens $rest)
 }
 
 # route 子命令的第一个非选项 token 是动作（explain | run）。

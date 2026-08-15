@@ -2,9 +2,9 @@
   "id": "agent",
   "package_name": "relay-agent",
   "display_name": "Relay",
-  "description": "Thin multi-backend execution layer for Claude Code, OpenCode, and Antigravity that preserves native model and CLI controls.",
-  "short_description": "Run a chosen native backend without wrapper policy",
-  "default_prompt": "Use $relay-agent as a thin execution layer. Ask for an explicit backend, model, agent, and native parameters; preserve raw output for Codex review.",
+  "description": "Configure and run Codex native-provider workers (DeepSeek or other Responses-compatible provider/model as a real Codex native child) plus thin external-cli workers (Claude Code, OpenCode, Antigravity). Use when the user wants to connect a custom provider/model, set Base URL/model/API key, or delegate a task to a worker with explicit control and review.",
+  "short_description": "Run native-provider and external-cli workers with explicit control",
+  "default_prompt": "Use $relay-agent as a thin execution layer. Ask for an explicit backend/model, or configure a native-provider worker from Base URL + Model ID + API Key (key via stdin only, never on the command line); preserve raw output for Codex review.",
   "mode": "router",
   "allowed_backends": [
     "claude",

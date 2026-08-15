@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://relay.local/contracts/capability-probe.schema.json",
+  "title": "CodeX Capability Probe Output",
+  "description": "A2 evidence artifact：版本化 probe 输出。行为能力未验证前必须 fail closed 为 unknown/blocked，不得仅凭配置键存在或版本号新就宣称 supported。Versioned probe output; unverified behavior capabilities must fail closed as unknown/blocked and must never be claimed supported from config keys or version numbers alone.",
+  "type": "object",
+  "required": ["probe_schema_version", "probe_run_id", "generated_at", "host", "codex", "capabilities"],
+  "properties": {
+    "probe_schema_version": { "type": "string", "const": "1.0" },
+    "probe_run_id": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "host": {
+      "type": "object",
+      "required": ["name", "os_version", "pwsh_version"],
+      "properties": {
+        "name": { "enum": ["win32", "linux", "macos", "unknown"] },
+        "os_version": { "type": "string" },
+        "pwsh_version": { "type": "string" }
+      }
+    },
+    "codex": {
+      "type": "object",
+      "required": ["cli_version", "cli_source"],
+      "properties": {
+        "cli_version": { "type": "string" },
+        "cli_source": { "type": "string" }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status", "detail"],
+        "properties": {
+          "status": { "enum": ["supported", "unsupported", "blocked", "unknown"] },
+          "detail": { "type": "string" },
+          "evidence": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}
