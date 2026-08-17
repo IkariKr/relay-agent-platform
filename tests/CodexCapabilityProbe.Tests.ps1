@@ -52,18 +52,58 @@ Describe "Doctor: available vs blocking capabilities" {
 }
 
 Describe "live verification evidence flips demonstrated capabilities to supported" {
-    It "custom_agent_spawn / native_wait_callback / native_cancel / plaintext are supported when B4 evidence exists" {
+    It "B4 transport evidence stays fail-closed until a matching capability report is present" {
+        $root = Join-Path ([System.IO.Path]::GetTempPath()) ("relay-evidence-" + [guid]::NewGuid().ToString("N"))
+        $transportDir = Join-Path $root "transport"
+        $capabilityDir = Join-Path $root "codex-capability"
+        New-Item -ItemType Directory -Path $transportDir -Force | Out-Null
+        try {
+            '{"type":"thread.started"}' | Set-Content -LiteralPath (Join-Path $transportDir "b4-native-child-fixture.jsonl") -Encoding utf8
+
+            $withoutCapabilityReport = Get-CodexCapabilityProbeResult -LiveEvidenceDir $transportDir
+            $withoutCapabilityReport.capabilities.custom_agent_spawn.status | Should -Be "unknown"
+
+            $hostInfo = Get-CodexHostInfo
+            $codex = Get-CodexCliInfo
+            New-Item -ItemType Directory -Path $capabilityDir -Force | Out-Null
+            $capabilityReport = [ordered]@{
+                probe_schema_version = "1.0"
+                host = [ordered]@{ name = $hostInfo.name }
+                codex = [ordered]@{ cli_version = ($codex.cli_version + "-different") }
+                capabilities = [ordered]@{}
+            }
+            foreach ($key in @("custom_agent_spawn", "fork_isolation", "native_wait_callback", "native_cancel", "plaintext_initial_message", "plaintext_followup_message")) {
+                $capabilityReport.capabilities[$key] = [ordered]@{ status = "supported" }
+            }
+            $capabilityReport | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $capabilityDir "fixture.json") -Encoding utf8
+
+            $mismatchedCapabilityReport = Get-CodexCapabilityProbeResult -LiveEvidenceDir $transportDir
+            $mismatchedCapabilityReport.capabilities.custom_agent_spawn.status | Should -Be "unknown"
+
+            $capabilityReport.codex.cli_version = $codex.cli_version
+            $capabilityReport | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $capabilityDir "fixture.json") -Encoding utf8
+            $withCapabilityReport = Get-CodexCapabilityProbeResult -LiveEvidenceDir $transportDir
+            $withCapabilityReport.capabilities.custom_agent_spawn.status | Should -Be "supported"
+            $withCapabilityReport.capabilities.native_wait_callback.status | Should -Be "supported"
+            $withCapabilityReport.capabilities.native_cancel.status | Should -Be "supported"
+            $withCapabilityReport.capabilities.plaintext_initial_message.status | Should -Be "supported"
+        }
+        finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It "B4 transport evidence without a matching capability report remains unknown" {
         $evidenceDir = Join-Path ([System.IO.Path]::GetTempPath()) ("relay-evidence-" + [guid]::NewGuid().ToString("N"))
         New-Item -ItemType Directory -Path $evidenceDir -Force | Out-Null
         try {
             # 最小 live evidence 占位（结构上匹配 b4-native-child-*.jsonl 命名）
             '{"type":"turn.started"}' | Set-Content -LiteralPath (Join-Path $evidenceDir "b4-native-child-20260814.jsonl") -Encoding utf8
             $result = Get-CodexCapabilityProbeResult -LiveEvidenceDir $evidenceDir
-            $result.capabilities.custom_agent_spawn.status | Should -Be "supported"
-            $result.capabilities.native_wait_callback.status | Should -Be "supported"
-            $result.capabilities.native_cancel.status | Should -Be "supported"
-            $result.capabilities.plaintext_initial_message.status | Should -Be "supported"
-            $result.capabilities.custom_agent_spawn.evidence | Should -Not -BeNullOrEmpty
+            $result.capabilities.custom_agent_spawn.status | Should -Be "unknown"
+            $result.capabilities.native_wait_callback.status | Should -Be "unknown"
+            $result.capabilities.native_cancel.status | Should -Be "unknown"
+            $result.capabilities.plaintext_initial_message.status | Should -Be "unknown"
         }
         finally {
             Remove-Item -LiteralPath $evidenceDir -Recurse -Force -ErrorAction SilentlyContinue

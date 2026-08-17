@@ -209,6 +209,22 @@ function Sync-NativeProviderRuntime {
                 -DestinationPath (Join-Path $DestinationPackageRoot $relativePath)
         }
     }
+
+    # B4 transport 与 capability report 必须一起随统一安装包发布；doctor 依赖两者对当前宿主 fail-closed 验证。
+    # Ship B4 transport and capability reports together; doctor relies on both for fail-closed host validation.
+    foreach ($relativeDir in @(
+            "docs\evidence\transport",
+            "docs\evidence\codex-capability"
+        )) {
+        $sourceRoot = Join-Path $repoRoot $relativeDir
+        if (-not (Test-Path -LiteralPath $sourceRoot)) { continue }
+        foreach ($file in Get-ChildItem -Path $sourceRoot -File) {
+            $relativePath = [System.IO.Path]::GetRelativePath($repoRoot, $file.FullName)
+            Copy-File `
+                -SourcePath $file.FullName `
+                -DestinationPath (Join-Path $DestinationPackageRoot $relativePath)
+        }
+    }
 }
 
 function Get-BackendRunnerSourcePath {

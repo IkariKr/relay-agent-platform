@@ -268,7 +268,7 @@ Describe "NP-CLI: full configure -> doctor -> dispatch lifecycle (no paid calls)
         @($json.removed) | Should -Contain "profile"
         @($json.removed) | Should -Contain "credential"
         # worker 仍在 registry（uninstall 只清 relay state，不删仓库 pack）
-        $r2 = Invoke-Cli -Tokens @("show", $script:workerId, "--json")
+        $r2 = Invoke-Cli -Tokens @("show", $script:workerId, "--json", "--codex-home", $script:codexHome)
         $json2 = ConvertFrom-CliJson -Output $r2.Output
         $json2.worker_id | Should -Be $script:workerId
         @($json2.profiles).Count | Should -Be 0

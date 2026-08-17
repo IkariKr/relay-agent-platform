@@ -267,6 +267,22 @@ foreach ($surface in $surfaceManifests) {
                 -Message "Router surface '$($surface.id)' surface registry manifest is out of sync for '$surfaceId'. Run scripts/build-packages.ps1."
         }
 
+        foreach ($relativeEvidenceDir in @(
+                "docs\evidence\transport",
+                "docs\evidence\codex-capability"
+            )) {
+            $sourceEvidenceDir = Join-Path $repoRoot $relativeEvidenceDir
+            foreach ($sourceEvidenceFile in @(Get-ChildItem -LiteralPath $sourceEvidenceDir -File)) {
+                $relativeEvidencePath = [System.IO.Path]::GetRelativePath($repoRoot, $sourceEvidenceFile.FullName)
+                $destinationEvidencePath = Join-Path $packageRoot $relativeEvidencePath
+                Assert-FileExists -Path $destinationEvidencePath
+                Assert-FileContentMatches `
+                    -SourcePath $sourceEvidenceFile.FullName `
+                    -DestinationPath $destinationEvidencePath `
+                    -Message "Router surface '$($surface.id)' evidence copy is out of sync: $relativeEvidencePath. Run scripts/build-packages.ps1."
+            }
+        }
+
         $runDelegateScriptRelativePath = @($surface.public_scripts | Where-Object { ([System.IO.Path]::GetFileName([string]$_)) -eq "run_delegate_agent.ps1" } | Select-Object -First 1)
         if ($runDelegateScriptRelativePath.Count -gt 0) {
             Assert-RunDelegateAgentUsesThinRelayContract -ScriptPath (Resolve-RepoRelativePath -RelativePath ([string]$runDelegateScriptRelativePath[0]))

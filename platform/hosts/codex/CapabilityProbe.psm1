@@ -76,17 +76,55 @@ function Get-CodexCapabilityProbeResult {
         $capabilities["hook"] = New-CapabilityStatus -Status "unknown" -Detail "no config.toml at $($config.path)"
     }
 
-    # 运行时行为：离线 fail closed 为 unknown；若提供 B4 live evidence（b4-native-child-*.jsonl），
-    # 则把已验证能力标记为 supported 并引用证据路径（roadmap §8.3 "capability report 与实际行为一致"）。
-    # Live-host behaviors fail closed as unknown offline; when B4 live evidence is supplied
-    # (b4-native-child-*.jsonl), demonstrated capabilities become supported with evidence refs.
-    $liveVerified = @()
+    # 运行时行为必须同时有 B4 transport 日志和与当前宿主/Codex 版本匹配的 capability report。
+    # 仅有历史 JSONL 不能证明当前版本仍可用，必须 fail closed（roadmap §8.3）。
+    # Runtime behaviors require both B4 transport logs and a capability report matching the
+    # current host/Codex version. Historical JSONL alone cannot prove current support.
+    $liveTransportEvidence = @()
+    $matchingCapabilityReports = @()
     if (-not [string]::IsNullOrWhiteSpace($LiveEvidenceDir) -and (Test-Path -LiteralPath $LiveEvidenceDir)) {
-        $liveVerified = @(Get-ChildItem -LiteralPath $LiveEvidenceDir -Filter "b4-native-child-*.jsonl" -File -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+        $liveTransportEvidence = @(Get-ChildItem -LiteralPath $LiveEvidenceDir -Filter "b4-native-child-*.jsonl" -File -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+        $capabilityEvidenceDir = Join-Path (Split-Path -Parent $LiveEvidenceDir) "codex-capability"
+        $requiredLiveCapabilities = @(
+            "custom_agent_spawn",
+            "fork_isolation",
+            "native_wait_callback",
+            "native_cancel",
+            "plaintext_initial_message",
+            "plaintext_followup_message"
+        )
+
+        if ($liveTransportEvidence.Count -gt 0 -and (Test-Path -LiteralPath $capabilityEvidenceDir)) {
+            foreach ($reportFile in @(Get-ChildItem -LiteralPath $capabilityEvidenceDir -Filter "*.json" -File -ErrorAction SilentlyContinue)) {
+                try {
+                    $report = Get-Content -Raw -LiteralPath $reportFile.FullName | ConvertFrom-Json
+                    $hostMatches = $null -ne $report.host -and [string]$report.host.name -eq [string]$hostInfo.name
+                    $versionMatches = $null -ne $report.codex -and [string]$report.codex.cli_version -eq [string]$cliInfo.cli_version
+                    $allRequiredSupported = $null -ne $report.capabilities
+                    foreach ($key in $requiredLiveCapabilities) {
+                        if (-not $allRequiredSupported -or
+                            -not ($report.capabilities.PSObject.Properties.Name -contains $key) -or
+                            [string]$report.capabilities.$key.status -ne "supported") {
+                            $allRequiredSupported = $false
+                            break
+                        }
+                    }
+                    if ($hostMatches -and $versionMatches -and $allRequiredSupported) {
+                        $matchingCapabilityReports += $reportFile.FullName
+                    }
+                }
+                catch {
+                    # 损坏或非预期的报告不能影响 doctor；继续检查其余证据文件。
+                    # A malformed report cannot affect doctor; continue checking other evidence.
+                    continue
+                }
+            }
+        }
     }
+    $liveVerified = @($liveTransportEvidence + $matchingCapabilityReports)
     $liveHostDetail = "requires live Codex host; scheduled for B2 transport spike; fail-closed offline"
-    $verifiedDetail = if ($liveVerified.Count -gt 0) { "live-verified: $($liveVerified -join '; ')" } else { $liveHostDetail }
-    $liveStatus = if ($liveVerified.Count -gt 0) { "supported" } else { "unknown" }
+    $verifiedDetail = if ($matchingCapabilityReports.Count -gt 0) { "live-verified: $($liveVerified -join '; ')" } else { $liveHostDetail }
+    $liveStatus = if ($matchingCapabilityReports.Count -gt 0) { "supported" } else { "unknown" }
 
     $capabilities["custom_agent_spawn"] = New-CapabilityStatus -Status $liveStatus -Detail $verifiedDetail -Evidence @($liveVerified)
     $capabilities["fork_isolation"] = New-CapabilityStatus -Status $liveStatus -Detail $verifiedDetail -Evidence @($liveVerified)
@@ -95,7 +133,7 @@ function Get-CodexCapabilityProbeResult {
     $capabilities["plaintext_initial_message"] = New-CapabilityStatus -Status $liveStatus -Detail $verifiedDetail -Evidence @($liveVerified)
     $capabilities["plaintext_followup_message"] = New-CapabilityStatus -Status $liveStatus -Detail $verifiedDetail -Evidence @($liveVerified)
     # hook 为可拔除兼容层：native plaintext transport 已验证时无需 hook（roadmap 首选路径）。
-    $hookDetail = if ($liveVerified.Count -gt 0) { "hook not used; native plaintext transport verified (preferred path)" } else { $liveHostDetail }
+    $hookDetail = if ($matchingCapabilityReports.Count -gt 0) { "hook not used; native plaintext transport verified (preferred path)" } else { $liveHostDetail }
     $capabilities["hook_additional_context"] = New-CapabilityStatus -Status $liveStatus -Detail $hookDetail -Evidence @($liveVerified)
 
     return [pscustomobject]@{

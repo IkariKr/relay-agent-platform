@@ -80,4 +80,23 @@ Describe "NP-PKG: relay-agent package is self-contained for native-provider" {
         $json = $jsonLine | ConvertFrom-Json
         @($json.workers | Where-Object { $_.worker_id -eq "deepseek-v4-flash" })[0].runtime_type | Should -Be "native-provider"
     }
+
+    It "NP-PKG-003: package ships B4 transport and capability evidence for doctor" {
+        $sourceTransport = Join-Path $repoRoot "docs\evidence\transport"
+        $sourceCapability = Join-Path $repoRoot "docs\evidence\codex-capability"
+        $packageTransport = Join-Path $script:agentPackage "docs\evidence\transport"
+        $packageCapability = Join-Path $script:agentPackage "docs\evidence\codex-capability"
+
+        foreach ($sourceFile in @(Get-ChildItem -LiteralPath $sourceTransport -Filter "b4-native-child-*.jsonl" -File)) {
+            $packageFile = Join-Path $packageTransport $sourceFile.Name
+            (Test-Path -LiteralPath $packageFile) | Should -BeTrue -Because $sourceFile.Name
+            (Get-Content -Raw -LiteralPath $packageFile) | Should -Be (Get-Content -Raw -LiteralPath $sourceFile.FullName)
+        }
+
+        foreach ($sourceFile in @(Get-ChildItem -LiteralPath $sourceCapability -Filter "*.json" -File)) {
+            $packageFile = Join-Path $packageCapability $sourceFile.Name
+            (Test-Path -LiteralPath $packageFile) | Should -BeTrue -Because $sourceFile.Name
+            (Get-Content -Raw -LiteralPath $packageFile) | Should -Be (Get-Content -Raw -LiteralPath $sourceFile.FullName)
+        }
+    }
 }
