@@ -1,7 +1,7 @@
 {
   "name": "relay-agent",
-  "description": "Unified delegation entrypoint that routes bounded coding tasks to Claude Code or OpenCode while Codex keeps responsibility for task decomposition, review, verification, retry prompts, and git commits.",
+  "description": "Relay for Codex: a unified worker entrypoint for native subagents and bounded external workers while Codex keeps responsibility for task decomposition, review, verification, retry prompts, and git commits.",
   "displayName": "Relay",
-  "shortDescription": "Route coding work to Claude or OpenCode, then review",
+  "shortDescription": "Run Codex native subagents and external workers",
   "defaultPrompt": "Use $relay-agent to choose the right backend, delegate this coding task, review the diff, and commit only verified changes."
 }

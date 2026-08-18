@@ -1,5 +1,7 @@
 # Relay
 
+> Relay for Codex · Codex 原生子代理中继层
+
 > Relay is the new name for the former `codex-delegate-*` skill family.
 >
 > 把 agent 变成可控执行层，而不是失控自动驾驶。

@@ -1,6 +1,6 @@
 ---
 name: relay-agent
-description: Configure and run Codex native-provider workers (DeepSeek or other Responses-compatible provider/model as a real Codex native child) plus thin external-cli workers (Claude Code, OpenCode, Antigravity). Use when the user wants to connect a custom provider/model, set Base URL/model/API key, or delegate a task to a worker with explicit control and review.
+description: Relay for Codex: configure and run native-provider workers as real Codex native children, plus thin external-cli workers (Claude Code, OpenCode, Antigravity). Use when the user wants to connect a custom provider/model, set Base URL/model/API key, or delegate a task with explicit control and review.
 ---
 
 # Relay
