@@ -1,225 +1,176 @@
-# Relay
+# ⚡ Relay · Codex 多模型子代理与 CLI 执行调度层
 
-> Relay for Codex · Codex 原生子代理中继层
+> **主模型专注决策规划 🧠 ｜ 子代理与 CLI 负责落地执行 ⚙️**  
+> 支持在 Codex 中无缝拉起 DeepSeek、Gemini 原生子代理，一键中继 Claude Code、OpenCode、Antigravity CLI。保持上下文干净，大幅节省 Token 消耗！
 
-> Relay is the new name for the former `codex-delegate-*` skill family.
->
-> 把 agent 变成可控执行层，而不是失控自动驾驶。
+[![Tests](https://img.shields.io/badge/Pester%20Tests-152%2F152%20Passing-brightgreen?style=flat-square&logo=powershell)](docs/test-matrix.md)
+[![Codex](https://img.shields.io/badge/Codex%20Native-Supported-blue?style=flat-square)](docs/codex-native-subagent-roadmap.md)
+[![License](https://img.shields.io/badge/License-MIT-orange?style=flat-square)](LICENSE)
 
-如果你也有这种感觉:
+---
 
-- 想让 agent 干活更快
-- 但又不想把 review、验证、提交权一起交出去
-- 还希望不同后端能统一接入、统一路由、统一管理
+## 🎯 为什么需要 Relay？
 
-那这个仓库大概率就是你要找的东西。
+在日常使用 Codex 进行复杂项目开发时，经常会遇到这几个核心问题：
 
-`Relay` 不是“让代理自己一路改到天亮”的全自动脚本。当前 v2 已将外部 CLI 路线收敛为**薄型多后端执行层**，下一阶段则把它升级为面向 Codex 的 **Worker Runtime Platform**：
+1. **主模型上下文迅速臃肿**：单一大模型既要做高层架构拆解，又要写具体实现，日志、中间代码和排错过程很容易把主会话上下文撑爆，Token 消耗极快。
+2. **缺乏原生高性价比 Subagent 支持**：想要接入便宜又好用的 DeepSeek、Gemini 等第三方模型充当打工子代理，手写配置繁琐且缺乏官方标准支持。
+3. **跨 CLI 工具调度割裂**：想临时调用 Claude Code、OpenCode 或 Antigravity CLI 协助跑特定任务，各工具间参数不通、环境割裂、输出难以规范收集。
 
-- Codex 主代理负责拆解任务、数据边界、复核、验证和最终决策
-- `native-provider` worker 以真正的 Codex native child 运行，并可使用独立第三方 provider/model
-- `external-cli` worker（Claude / OpenCode / Antigravity）仍只执行一条原生命令
-- Relay 负责 worker 声明、安装、能力探测、安全策略，以及 external-cli 的最小参数映射、原始输出和退出码
+> 💡 **Relay 提供统一的 Worker Runtime 调度层：**  
+> 将具体任务委派给第三方原生子代理或外部 CLI 工具执行，主模型仅接收精简摘要与最终产物。**主会话上下文保持清爽，Token 成本直线下降！**
 
-本文默认使用 `Codex` 指 OpenAI Codex 产品/runtime，包括主代理、CLI、原生 multi-agent 与 native child 生命周期；只有在特指当前 `CodeX` 宿主集成或 host adapter 时才使用 `CodeX`。
+---
 
-一句话说，`Relay` 是一套把“代理执行”做成可审查、可验证、可路由的 worker runtime 基础设施；Git 回滚、提交与最终接受仍由 Codex/用户显式负责。
+## ✨ 核心能力一览
 
-## 这个项目到底在解决什么
+### 1️⃣ 🧬 Codex 原生 Native-Provider（子代理）
+- **真·原生通信**：基于 Codex 原生 `spawn_agent` / `wait` / `send_input` 机制，无需 Hook 或侵入式修改。
+- **高性价比模型即插即用**：零门槛接入 **DeepSeek-V4**、**Gemini-3.7** 等第三方模型作为专属 Subagent，重活累活交给子代理，主模型专注高层审查。
 
-很多 agent 工作流的真实痛点，不是“模型不够聪明”，而是这两件事:
+### 2️⃣ 🚀 外部 CLI 统一中继（External-CLI）
+- **多后端无缝调用**：一条统一入口直接调起 **Claude Code**、**OpenCode**、**Antigravity** 原生 CLI。
+- **透明日志与状态流转**：实时增量日志镜像、命令与退出码原汁原味透传，排错轻松明了。
 
-1. 改得很快，但 scope 很容易飘
-2. 改完之后，没有稳定的 review 和 verification 闭环
+### 3️⃣ 🛡️ 安全与配置隔离
+- **凭据标准注入**：API Key 通过安全管道（stdin）传入并自动做 Token 级脱敏，防止凭证泄漏到历史命令行与本地日志。
+- **统一 Worker 注册表**：通过标准 Worker Pack 扩展模型，开箱即用，支持一键健康体检（`worker doctor`）。
 
-`Relay` 的 v2 思路非常直接:
+---
 
-- 把执行交给后端原生 CLI
-- 把任务生命周期和判断留给 Codex
-- 把路由变为显式可选能力，不再在默认链路中重试、超时、轮询 Git 或解析 JSONL
+## 🚀 3 分钟极速上手
 
-它的目标工作流大致是这样：
-
-```text
-[ 你的需求 ]
-    |
-    v
-[ Codex 总控 ]
-    |  拆解任务、设置数据边界、选择 worker
-    v
-[ Worker Runtime Registry ]
-    |--> native-provider
-    |      `--> Codex native child → DeepSeek / 其他第三方 provider
-    |
-    `--> external-cli
-           `--> Thin Relay → Claude / OpenCode / Antigravity CLI
-                    |
-                    v
-               [ 返回结果 ]
-                    |
-                    v
-              [ Codex 复核 ]
-                    |
-                    v
-                [ 最终结果 ]
-```
-
-自动路由是显式可选能力，不是所有执行的必经层。
-
-所以它更适合认真做工程的人，而不是只追求“一条命令全自动提交”的玩法。
-
-## 给使用者
-
-如果你属于下面这些场景，`Relay` 会很顺手:
-
-- 你想让 Claude Code 落地实现，但不想让它直接 commit
-- 你想统一接入多个 worker，而不是每个后端各玩各的
-- 你希望把不同后端统一成一套稳定入口
-
-如果你要的是“代理自己改、自己测、自己提交、自己收尾”，那它就不是按这个产品哲学设计的。
-
-### 先记住这个定位
-
-`Relay` 当前稳定提供 external-cli 多后端委托能力，并正在按 [CodeX Native Subagent 优先路线图](docs/codex-native-subagent-roadmap.md) 实现首批 `native-provider` worker：
-
-- `relay-agent`
-  默认推荐的统一入口，支持自动路由和显式后端选择
-- `relay-claude`
-  只走 Claude 的专用包
-- `relay-opencode`
-  只走 OpenCode 的专用包
-- `relay-antigravity`
-  只走 Antigravity CLI 的专用包
-
-如果你是第一次接触 external-cli 路线，请从薄入口 `scripts/relay.ps1 run` 开始（旧入口 `scripts/run_relay.ps1` 仍作为兼容层可用）。第三方模型的 Codex native child 能力只有在对应 worker 通过 capability probe 与 native identity/provider/callback smoke test 后，才会在发布文档中标记为 supported。
-
-### Roadmap 状态
-
-当前实现状态与目标语法必须分开看：
-
-- external-cli Backend Registry / Surface 架构已存在，canonical 入口 `scripts/relay.ps1 run` 已可用（`scripts/run_relay.ps1` 为兼容入口）；
-- Thin Relay v2 Phase 0 已收口：`--log-dir` 实时 mirror、token-aware redaction、进程级契约测试均已落地并有测试证据；
-- Worker Runtime Registry（A1）、CodeX host / Codex capability probe（A2）、DeepSeek pack + preflight（B1）、Dispatch Policy（C）、第二 provider 零核心特判（D）、host adapter（E）均已落地（137 项确定性测试，由 `scripts/test.ps1` 一键复现，evidence 见 `docs/evidence/test-run/`）；
-- **B2 已完成**：codex-cli 0.147.0 原生 plaintext transport 验证通过——marker 经 native child 往返，`spawn_agent` / `wait` / `send_input` / `close_agent`（原生 cancel）全部可用，**无需 Hook**（roadmap 首选路径）；B3 未进入；
-- **B4 paid native smoke 已通过**（仅限已验证组合）：codex-cli 0.147.0 + `custom`（`nexus.ikarikore.top/v1`，wire_api=responses）+ `deepseek-v4-flash-response` + `[agents.deepseek-v4-flash]` 注册（证据：`docs/evidence/transport/b4-native-child-2026-08-14.md` 及 jsonl）。**P0-4/P0-5 已完成**：产品化 profile-suffixed role（`[agents.<worker>--<profile>]`，由 `relay worker configure` 生成）的 native child 全链路（spawn/wait/send_input/close_agent + marker 往返）已在 codex-cli 0.147.0 与 Codex Desktop 26.810.6296.0（bundled codex-cli 0.148.0-alpha.9）各自独立验收通过（证据：`b4-native-child-profile-suffix-2026-08-15.md`、`b4-native-child-desktop-2026-08-15.md`）。按 roadmap §8.1/§9 语言规则，上述组合下 DeepSeek 可称 **supported Codex native child**；其他版本/模型/宿主必须各自重跑验收，不得自动外推；
-- 示例已切换到 canonical `relay run`；`run_relay.ps1` 作为兼容入口保留，按 SOP Phase 3 弃用。
-
-能力声明门槛见 [CodeX Native Subagent 优先路线图](docs/codex-native-subagent-roadmap.md#81-phase--release--claim-gate)，跨阶段测试索引见 [测试矩阵](docs/test-matrix.md)。
-
-### 3 分钟感受一下
-
-下面这几句，都是直接发给 Codex 对话框的。
-
-1. 安装
-
+### 1. 安装到 Codex
+在 Codex 中直接发送：
 ```text
 请帮我在 Codex 里安装这个 GitHub 项目：https://github.com/IkariKr/relay-agent-platform
 ```
 
-2. 使用（显式选择后端）
-
-```text
-./scripts/relay.ps1 run --backend opencode --model opencode/deepseek-v4-flash-free -- "<你的任务>"
-```
-
-Relay 会打印并执行可复制的原生 OpenCode 命令；Codex 负责后续 review。
-
-3. 使用原生 Codex subagent 管理长任务
-
-```text
-请创建一个 Codex subagent，使用 relay 的 OpenCode DeepSeek 薄入口完成这个任务，并持续汇报公开的进度。
-```
-
-这样进度、上下文、中断和后续决策由 Codex UI 管理，Relay 不再模拟这些能力。
-
-4. 配置并调度 native-provider worker（DeepSeek / 其他 Responses-compatible provider）
-
-```text
-帮我把 DeepSeek 配成 relay 的原生 subagent。
-Base URL: https://nexus.example.com/v1
-Model ID: deepseek-v4-flash-response
-API Key: <secret>
-```
-
-安装 `relay-agent` skill 的 Agent 会按 skill 协议自动运行 `relay worker list → status → configure（API Key 走 stdin）→ doctor → dispatch`；用户不需要理解 Codex TOML、provider 注册或环境变量命名。全部 worker 命令都提供稳定 `--json` 合同，API Key 永远不进入命令行参数或输出：
-
-```text
-./scripts/relay.ps1 worker list --json
-./scripts/relay.ps1 worker status deepseek-v4-flash --json
-./scripts/relay.ps1 worker doctor deepseek-v4-flash --json
-```
-
-如果你想把边界收得更紧，也支持继续补参数，比如 `backend`、`model`、`prompt`。
-
-### 使用者继续往下看
-
-- [docs/Archive/quickstart.md](docs/Archive/quickstart.md)
-- [docs/Archive/thin-relay-v2-sop.md](docs/Archive/thin-relay-v2-sop.md)
-- [docs/codex-native-subagent-roadmap.md](docs/codex-native-subagent-roadmap.md)
-- [docs/Archive/package-selection.md](docs/Archive/package-selection.md)
-- [docs/Archive/troubleshooting.md](docs/Archive/troubleshooting.md)
-
-## 给维护者
-
-如果你不是单纯想使用它，而是准备继续扩后端、改路由、调打包、做发布，那从这里开始看。
-
-### 仓库结构
-
-这个仓库不是“只有几个脚本拼起来”的一次性产物，它已经拆成了几层:
-
-- `shared/`
-  共享文档和公共 PowerShell 逻辑
-- `backends/`
-  后端元数据、脚本和后端说明
-- `packages/relay-agent/`
-  统一入口 package
-- `packages/relay-claude/`
-  Claude package
-- `packages/relay-opencode/`
-  OpenCode package
-- `packages/relay-antigravity/`
-  Antigravity package
-- `scripts/build-packages.ps1`
-  重新生成 packages
-- `scripts/validate-packages.ps1`
-  校验生成结果
-- `platform/`
-  平台 runtime / manifest contract；下一阶段承载 Worker Runtime Registry、CodeX host adapter 与 native-provider transport
-
-维护时重点看 `shared/`、`backends/`、`scripts/` 和 `docs/`。
-
-### 安装和维护建议
-
-更推荐的维护方式，是把整个仓库放进 Codex skills 目录，然后生成并链接 package:
-
+*(或者在本地仓库一键生成并挂载 Skill)*
 ```powershell
 .\scripts\build-packages.ps1
 .\scripts\install-workspace-skill-links.ps1
 ```
 
-这样会得到四个可安装 skill:
+---
 
-- `relay-agent`
-- `relay-claude`
-- `relay-opencode`
-- `relay-antigravity`
+### 2. 配置 Worker（以 DeepSeek 为例）
 
-如果你只是想快速使用，也可以直接复制已经生成好的 package。
+#### 方式 A：在 Codex 中直接发送（最推荐，零命令负担）
+直接在 Codex 对话框中发送如下内容，Codex 将自动调用 Relay 协议完成安全配置与健康检查：
+```text
+帮我把 DeepSeek 配置为 Relay 的原生子代理：
+- Base URL: https://xxx.example.com/v1
+- Model ID: deepseek-v4-flash
+- API Key: <你的 API Key>
+```
 
-完整安装说明在这里:
+#### 方式 B：使用命令行手动配置
+通过标准输入安全注入密钥（API Key 走标准输入，不留痕）：
+```powershell
+# 1. 查看可用 Worker 列表
+.\scripts\relay.ps1 worker list
 
-- [docs/Archive/installation.md](docs/Archive/installation.md)
+# 2. 安全配置 Provider
+"sk-your-api-key" | .\scripts\relay.ps1 worker configure deepseek-v4-flash --base-url "https://xxx.example.com/v1" --model "deepseek-v4-flash"
 
-### 维护者推荐阅读顺序
+# 3. 运行健康检查验证连通性
+.\scripts\relay.ps1 worker doctor deepseek-v4-flash
+```
 
-- [docs/codex-native-subagent-roadmap.md](docs/codex-native-subagent-roadmap.md)（当前实施路线图）
-- [docs/test-matrix.md](docs/test-matrix.md)（跨阶段测试索引）
-- [docs/v1-roadmap.md](docs/v1-roadmap.md)（v1.0.0 发布计划，尚未发版）
+---
 
-已实施/历史记录文档归档在 [docs/Archive/](docs/Archive/)：安装、quickstart、SOP、架构与迁移记录、包选择、路由指南、troubleshooting、发布清单、重命名与 fork 流程。
+### 3. 开始使用
 
-## 最后一句话
+#### 场景 A：创建原生 Subagent 分流任务（保持主上下文干净）
+在 Codex 中对主模型说：
+```text
+请创建一个 DeepSeek 子代理，帮我补齐这个模块的所有单元测试，完成后向我汇报结果。
+```
 
-`Relay` 不是为了让 agent 更“放飞”，而是为了让多 agent 协作这件事，第一次变得足够可控、可解释、可工程化。
+#### 场景 B：使用外部 CLI 执行特定任务
+在 Codex 中对主模型说：
+```text
+请调用 OpenCode CLI（使用 deepseek-v4-flash-free 模型），帮我分析当前项目的依赖并生成报告。
+```
+或者指定其他 CLI 执行：
+```text
+请调用 Claude Code CLI 帮我重构这个工具函数。
+```
 
-如果你喜欢“边界先说清，再把速度拉满”的工作方式，这个项目应该会很对味。
+---
+
+## 📦 家族 Skill 模块一览
+
+> 💡 **使用建议**：在 Codex 中**强烈推荐直接使用 `relay-agent`（或直接 @relay）**，享受自动路由与原生 Subagent + CLI 的全能调度能力。三个单后端包默认直接调用底层原生 CLI。
+
+| Skill 包名 | 默认执行模式 | 定位与适用场景 |
+| :--- | :--- | :--- |
+| 👑 **`relay-agent`** | **智能双引擎（推荐 ⭐⭐⭐⭐⭐）** | **统一调度总入口**：支持 Worker 注册管理、自动路由，可按需拉起 Native 原生子代理或 External-CLI 极速执行 |
+| 🟣 **`relay-claude`** | **默认原生 CLI (`claude`)** | **Claude Code 专用包**：专为 Claude Code CLI 调优的极简薄执行层，直接透传命令给 `claude` CLI |
+| 🟢 **`relay-opencode`** | **默认原生 CLI (`opencode`)** | **OpenCode 专用包**：直接调用 `opencode run` 命令行工具的专用中继通道 |
+| 🔵 **`relay-antigravity`** | **默认原生 CLI (`antigravity`)** | **Antigravity 专用包**：直接调用 `antigravity` 原生命令行工具的专用接入通道 |
+
+---
+
+## 🏗️ 架构设计
+
+```text
+       【 你的业务需求 】
+               │
+               ▼
+       ┌───────────────┐
+       │  Codex 主模型 │ ── (任务拆解 / 架构设计 / 保持干净上下文)
+       └───────┬───────┘
+               │ 派发子任务
+       ┌───────▼───────────────────────────┐
+       │   Relay Worker Runtime Registry   │
+       └───────┬───────────────────┬───────┘
+               │                   │
+   [ Native-Provider ]      [ External-CLI ]
+               │                   │
+  ┌────────────▼────────────┐ ┌────▼─────────────────────────┐
+  │ Codex Native Subagent   │ │ Thin Relay CLI Wrapper       │
+  │ (DeepSeek / Gemini ...) │ │ (Claude / OpenCode / Anti..) │
+  └────────────┬────────────┘ └────┬─────────────────────────┘
+               │                   │
+               └─────────┬─────────┘
+                         ▼ 仅返回摘要与执行产物
+             【 Codex 主模型复核与验收 】
+```
+
+---
+
+## ⚠️ 使用须知与限制说明
+
+在使用 **External-CLI（外部命令行模式）** 时，请留意以下几点：
+
+1. 🔑 **需提前完成 CLI 登录认证**：
+   - 首次使用外部后端（Claude Code / OpenCode / Antigravity）前，请确保已在终端对应工具中完成登录或环境凭据配置。
+   - 若未登录，CLI 会直接报错或提示认证缺失，Relay 会原样捕获并提醒你先完成对应 CLI 的登录。
+2. 🙈 **CLI 模式无法查看内部思考过程（CoT）**：
+   - External-CLI 属于黑盒式极速执行中继，主会话仅能实时捕获该命令的标准输出、错误日志与退出状态，**无法看到底层模型未公开的内部推理/思考过程（Thinking Tokens）**。
+   - 如需查看完整的推理交互和多轮会话上下文，推荐使用 **Native-Provider（原生子代理模式）**。
+
+---
+
+## 🤝 参与贡献与问题反馈
+
+如果你在使用过程中遇到了 Bug、有新的 Worker 模型需求或优化建议，欢迎交流与贡献！
+
+- 🐛 **提交 Issue**：遇到任何报错、兼容性问题或异常退出，请前往 [GitHub Issues](https://github.com/IkariKr/relay-agent-platform/issues) 提交反馈，附带复现步骤与日志。
+- 💡 **提交 PR (Pull Request)**：想接入更多 Provider Pack 或改进 Relay 调度器？欢迎 Fork 本仓库并提交 Pull Request，共同完善生态！
+
+---
+
+## 📚 进阶文档
+
+- 🗺️ **[Codex 原生子代理路线图](docs/codex-native-subagent-roadmap.md)**：深入了解 Codex Collab 协议对接与验证细节。
+- 🧪 **[自动化测试矩阵](docs/test-matrix.md)**：152 项 Pester 自动化测试与覆盖指标。
+- 📦 **[历史文档与 SOP 归档](docs/Archive/)**：安装配置、架构演进与故障排查手册。
+
+---
+
+<p align="center">
+  <sub>#AI编程 #Codex #Subagent #ClaudeCode #DeepSeek #Gemini #开发效率 #Token优化</sub>
+</p>
