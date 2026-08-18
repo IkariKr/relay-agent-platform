@@ -17,12 +17,12 @@
 
 When building complex projects in Codex, developers often face three common pain points:
 
-1. **Context Bloat & Token Waste**: A single large model handles both high-level design and low-level execution. Intermediate logs, verbose code drafts, and debug cycles quickly bloat the main conversation context and drain tokens.
+1. **Context Pollution & Attention Dilution**: A single large model handles both high-level system design and low-level code iterations, console errors, and intermediate debug logs. High-volume, low-density noise not only drains tokens rapidly but also dilutes the model's attention weights, leading to context drift and degraded high-level reasoning.
 2. **Lack of Native, Cost-Effective Subagents**: Connecting affordable and powerful third-party models (like DeepSeek or Gemini) as worker subagents typically requires tedious manual configuration without standard host support.
 3. **Fragmented CLI Workflows**: Switching between Claude Code, OpenCode, or Antigravity CLIs is disjointed—parameter formats differ, environments are isolated, and collecting structured outputs is difficult.
 
 > 💡 **Relay provides a unified Worker Runtime Dispatcher:**  
-> Delegate concrete tasks to third-party native subagents or external CLI tools while your main model receives only concise summaries and final artifacts. **Keep your main context pristine and significantly reduce Token costs!**
+> Delegate concrete tasks to third-party native subagents or external CLI tools while your main model receives only concise summaries and final artifacts. **Prevent low-signal details from polluting the main context, keep the model's attention laser-focused on architecture and critical decisions, and slash Token costs!**
 
 ---
 
