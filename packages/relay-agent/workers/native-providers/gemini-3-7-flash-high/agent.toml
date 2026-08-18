@@ -1,0 +1,13 @@
+# gemini-3-7-flash-high.toml — Gemini 3.7 Flash High 独立 agent overlay（pack 自持，不写主 provider/model）。
+# Pack-owned overlay; never touches the main agent's provider/model.
+# 运行时由 Relay profile 写入实际 Base URL、模型和 credential env 引用；模板不保存密钥。
+# Relay profiles write the runtime Base URL, model and credential env reference; this template never stores secrets.
+model_provider = "gemini"
+model = "<provider-model-id>"
+sandbox_mode = "read-only"
+
+[model_providers.gemini]
+name = "Gemini"
+base_url = "<responses-compatible-endpoint>"
+wire_api = "responses"
+env_key = "GEMINI_API_KEY"

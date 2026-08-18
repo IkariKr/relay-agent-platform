@@ -65,7 +65,9 @@ Describe "NP-PKG: relay-agent package is self-contained for native-provider" {
                 "platform\credentials\CredentialStore.psm1",
                 "platform\generation\CodexProviderConfigGenerator.psm1",
                 "workers\native-providers\deepseek-v4-flash\worker.json",
-                "workers\native-providers\deepseek-v4-flash\agent.toml"
+                "workers\native-providers\deepseek-v4-flash\agent.toml",
+                "workers\native-providers\gemini-3-7-flash-high\worker.json",
+                "workers\native-providers\gemini-3-7-flash-high\agent.toml"
             )) {
             (Test-Path -LiteralPath (Join-Path $script:agentPackage $required)) | Should -BeTrue -Because $required
         }
