@@ -154,7 +154,8 @@ Describe "NP-CLI: worker command surface with --json contract" {
     }
 
     It "NP-CLI-004: dispatch fails closed before configuration is ready" {
-        $r = Invoke-Cli -Tokens @("dispatch", $script:workerId, "--json", "--", "review this code")
+        $r = Invoke-Cli -Tokens @("dispatch", $script:workerId, "--json", "--codex-home", $script:codexHome,
+            "--", "review this code")
         $r.ExitCode | Should -Be 0
         $json = ConvertFrom-CliJson -Output $r.Output
         $json.status | Should -Be "blocked"
@@ -237,6 +238,57 @@ Describe "NP-CLI: full configure -> doctor -> dispatch lifecycle (no paid calls)
         $json.runtime_type | Should -Be "native-provider"
         $json.task | Should -Be "review the repo read-only"
         $json.execution | Should -Match "spawn_agent"
+    }
+
+    It "auto dispatch selects the only ready native profile and never returns an external CLI worker" {
+        $r = Invoke-Cli -Tokens @("dispatch", "--auto", "--json", "--codex-home", $script:codexHome,
+            "--", "review the repo read-only")
+        $r.ExitCode | Should -Be 0
+        $json = ConvertFrom-CliJson -Output $r.Output
+        $json.status | Should -Be "dispatch-ready"
+        $json.worker_id | Should -Be $script:workerId
+        $json.profile_id | Should -Be $script:profileId
+        $json.runtime_type | Should -Be "native-provider"
+        $json.selection | Should -Be "auto-unique-ready"
+        $json.execution | Should -Match "spawn_agent"
+        $json.execution | Should -Not -Match "antigravity|opencode|claude"
+    }
+
+    It "auto dispatch matches a named ready provider and fails closed when ready native candidates tie" {
+        $geminiWorkerId = "gemini-3-7-flash-high"
+        $geminiProfileId = "gemini-auto-" + [guid]::NewGuid().ToString("N").Substring(0, 8)
+        $geminiSecret = "sk-gemini-test-" + [guid]::NewGuid().ToString("N")
+        $reader = [System.IO.StringReader]::new($geminiSecret)
+        [Console]::SetIn($reader)
+        try {
+            $configure = Invoke-Cli -Tokens @("configure", $geminiWorkerId, "--profile", $geminiProfileId,
+                "--base-url", "https://nexus.example.com/v1", "--model", "gemini-3.7-flash-high",
+                "--api-key-stdin", "--non-interactive", "--json", "--codex-home", $script:codexHome)
+        }
+        finally { $reader.Dispose() }
+        (ConvertFrom-CliJson -Output $configure.Output).status | Should -Be "configured"
+
+        try {
+            $named = Invoke-Cli -Tokens @("dispatch", "--auto", "--json", "--codex-home", $script:codexHome,
+                "--", "Ask Gemini 3.7 to review this deployment read-only")
+            $namedJson = ConvertFrom-CliJson -Output $named.Output
+            $namedJson.status | Should -Be "dispatch-ready"
+            $namedJson.worker_id | Should -Be $geminiWorkerId
+            $namedJson.profile_id | Should -Be $geminiProfileId
+            $namedJson.selection | Should -Be "auto-task-match"
+
+            $ambiguous = Invoke-Cli -Tokens @("dispatch", "--auto", "--json", "--codex-home", $script:codexHome,
+                "--", "review this deployment read-only")
+            $ambiguousJson = ConvertFrom-CliJson -Output $ambiguous.Output
+            $ambiguousJson.status | Should -Be "selection-required"
+            $ambiguousJson.error_code | Should -Be "NATIVE_WORKER_SELECTION_REQUIRED"
+            @($ambiguousJson.candidates).Count | Should -Be 2
+            $ambiguousJson.runtime_type | Should -Be "native-provider"
+        }
+        finally {
+            Invoke-Cli -Tokens @("uninstall", $geminiWorkerId, "--profile", $geminiProfileId,
+                "--json", "--codex-home", $script:codexHome) | Out-Null
+        }
     }
 
     It "credential status/remove cycle works and never leaks the secret" {

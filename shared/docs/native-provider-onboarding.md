@@ -85,14 +85,25 @@ relay worker dispatch deepseek-v4-flash --profile personal-nexus -- <task>
 
 ## 执行规则
 
-1. 先 `relay worker status <worker-id> --profile <profile-id> --json`；
-2. 仅当 `status == ready` 才 `relay worker dispatch`；
-3. dispatch 前校验 data boundary（默认 read-only + external-transmit）；
-4. 任务可能含 secret / personal / regulated / 未授权私有源码时，遵守现有外发策略，
+1. 用户点名已配置的 provider/model（例如 Gemini、DeepSeek）时，必须将它解析为对应
+   native worker/profile；不得调用 `relay route`、`relay run`，也不得降级到 Antigravity、
+   Claude 或 OpenCode CLI。
+2. 用户未点名模型时，先查看已配置 profile 的公开 `purpose` 与就绪状态；若只有一个
+   合格 native profile，或任务文字能唯一匹配 provider/model，可用：
+   ```text
+   relay worker dispatch --auto -- <task>
+   ```
+   自动选择仅在返回 `dispatch-ready` 时成立。若返回
+   `NATIVE_WORKER_SELECTION_REQUIRED`，Agent 可依据公开 purpose 做唯一的任务适配选择；
+   仍并列时才向用户询问，**绝不**回退到 external-cli。
+3. 对已选中的 worker，先 `relay worker status <worker-id> --profile <profile-id> --json`；
+4. 仅当 `status == ready` 才 `relay worker dispatch`；
+5. dispatch 前校验 data boundary（默认 read-only + external-transmit）；
+6. 任务可能含 secret / personal / regulated / 未授权私有源码时，遵守现有外发策略，
    先向用户确认再外发；
-5. `dispatch` 返回决策对象；child 生命周期由 Codex 原生 `spawn_agent` 管理，
-   Relay 不实现第二套 child lifecycle；
-6. 只审查 child 的公开 tool events / 输出 / 最终结果。
+7. `dispatch` 返回 `agent_role` 后，必须使用 Codex 原生 `spawn_agent` 创建 child，再
+   `wait_agent` 等待结果并 `close_agent` 释放；Relay 不实现第二套 child lifecycle；
+8. 只审查 child 的公开 tool events / 输出 / 最终结果。
 
 ## 错误码与恢复动作
 
@@ -101,6 +112,8 @@ relay worker dispatch deepseek-v4-flash --profile personal-nexus -- <task>
 | WORKER_NOT_FOUND | worker id 不存在 | 运行 `relay worker list --json` 选正确 id |
 | PROFILE_NOT_FOUND | profile 不存在 | 运行 configure 创建 profile |
 | PROFILE_SELECTION_REQUIRED | 同一 worker 有多个 profile，未明确选择 | 读取返回的 `profile_ids`，选择目标 profile，并在后续 `status / doctor / dispatch` 中显式传 `--profile <profile-id>` |
+| NATIVE_WORKER_SELECTION_REQUIRED | 有多个 ready native profile，但任务未唯一匹配 provider/model | 依据公开 purpose 选择唯一适配者；仍并列才向用户询问，绝不回退到 external-cli |
+| NO_READY_NATIVE_PROVIDER | 没有已配置且 ready 的 native profile | 运行 `relay worker list --json`，只配置缺失的字段或修复 doctor 的阻断项 |
 | INCOMPLETE_CONFIG / OVERLAY_MISSING | 配置不完整 | 按 missing 列表向用户索取字段后重跑 configure |
 | AGENT_REGISTRATION_MISSING | Relay overlay 存在，但 Codex `[agents.*]` 注册缺失 | 对同一 worker/profile 重跑 `configure` 让 Relay 重建 owned 注册；不要指导用户手改 TOML |
 | CREDENTIAL_MISSING | 缺 API Key | 让用户运行 masked `credential set` 或经 stdin 提供 |

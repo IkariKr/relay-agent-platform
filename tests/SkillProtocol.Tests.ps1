@@ -22,6 +22,9 @@ Describe "NP-SKILL: generated relay-agent skill carries the Agent protocol" {
         $content | Should -Match "--api-key-stdin"
         $content | Should -Match "relay worker doctor"
         $content | Should -Match "relay worker dispatch"
+        $content | Should -Match "relay worker dispatch --auto"
+        $content | Should -Match "spawn_agent"
+        $content | Should -Match "不得.*relay route.*relay run"
     }
 
     It "NP-SKILL-002: the skill forbids command-line api keys" {

@@ -491,6 +491,142 @@ function Invoke-WorkerDispatch {
     return (New-WorkerCliSuccess -Data $data)
 }
 
+function Get-ReadyNativeProviderDispatchCandidates {
+    # 只暴露已就绪的 Relay-owned native profile。不得把 external-cli 当作 fallback，
+    # 因为 native 派发失败必须由 Codex/用户显式决定下一步。
+    # Exposes only ready Relay-owned native profiles. External CLI must never become
+    # a fallback because native dispatch failures require an explicit Codex/user decision.
+    param(
+        [string]$CodexHome = "",
+        [string]$CredentialScope = "User"
+    )
+
+    $candidates = @()
+    foreach ($profile in @(Get-ProviderProfiles -CodexHome $CodexHome)) {
+        $workerId = [string]$profile.worker_id
+        try { $descriptor = Get-WorkerDescriptor -WorkerId $workerId }
+        catch { continue }
+        if ([string]$descriptor.runtime_type -ne "native-provider") { continue }
+
+        $ready = Get-NativeProviderReadiness -WorkerId $workerId -ProfileId ([string]$profile.profile_id) `
+            -CodexHome $CodexHome -CredentialScope $CredentialScope
+        if ($ready.status -ne "ready") { continue }
+
+        $candidates += [pscustomobject]@{
+            worker_id = $workerId
+            profile_id = [string]$ready.profile_id
+            provider_id = [string]$ready.provider_id
+            model_id = [string]$ready.model_id
+            agent_role = [string]$ready.agent_role
+            display_name = [string]$descriptor.display_name
+            purpose = [string]$descriptor.purpose
+        }
+    }
+    return @($candidates | Sort-Object worker_id, profile_id)
+}
+
+function Get-NativeProviderTaskMatchScore {
+    # 只识别用户任务中明确出现的 provider/model 标识，不在 CLI 层假装理解任务语义。
+    # 语义适配由 Codex 主 Agent 完成；这里的职责是可审计、确定性的名称匹配。
+    # Recognizes only explicit provider/model identifiers in the task, not task semantics.
+    # Semantic suitability is owned by the Codex main agent; this layer is deterministic.
+    param(
+        [Parameter(Mandatory = $true)]$Candidate,
+        [Parameter(Mandatory = $true)][string]$Task
+    )
+
+    $terms = New-Object System.Collections.Generic.List[string]
+    foreach ($value in @([string]$Candidate.provider_id, [string]$Candidate.model_id, [string]$Candidate.worker_id, [string]$Candidate.display_name)) {
+        if ([string]::IsNullOrWhiteSpace($value)) { continue }
+        $terms.Add($value)
+        foreach ($part in ($value -split "[-_.\\s]+")) {
+            if ($part.Length -ge 3) { $terms.Add($part) }
+        }
+        foreach ($version in [regex]::Matches($value, "\\d+(?:\\.\\d+)+")) {
+            $terms.Add($version.Value)
+        }
+    }
+
+    $score = 0
+    foreach ($term in @($terms | Select-Object -Unique)) {
+        if ($Task.IndexOf($term, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+            $score = $score + 1
+        }
+    }
+    return $score
+}
+
+function ConvertTo-PublicNativeProviderCandidate {
+    # 候选输出只能包含选择所需的公开配置标识，绝不包含 URL、credential source 或 secret。
+    # Candidate output includes only public selection identifiers, never URL,
+    # credential source or secret material.
+    param([Parameter(Mandatory = $true)]$Candidate)
+    return [ordered]@{
+        worker_id = [string]$Candidate.worker_id
+        profile_id = [string]$Candidate.profile_id
+        provider_id = [string]$Candidate.provider_id
+        model_id = [string]$Candidate.model_id
+        purpose = [string]$Candidate.purpose
+    }
+}
+
+function Invoke-WorkerAutoDispatch {
+    # 无默认 worker 的 native 自动派发：唯一 ready 候选直接使用；多个候选时仅接受
+    # 任务中可审计的 provider/model 名称匹配，否则返回 selection-required 而不是猜测。
+    # Native auto dispatch without a default worker: use a unique ready candidate;
+    # with multiple candidates, accept only auditable provider/model name matching,
+    # otherwise return selection-required instead of guessing.
+    param(
+        [Parameter(Mandatory = $true)][string]$Task,
+        [string]$CodexHome = "",
+        [string]$CredentialScope = "User"
+    )
+    if ([string]::IsNullOrWhiteSpace($Task)) {
+        return (New-WorkerCliError -Code "TASK_MISSING" -Message "a task is required after '--'")
+    }
+
+    $candidates = @(Get-ReadyNativeProviderDispatchCandidates -CodexHome $CodexHome -CredentialScope $CredentialScope)
+    if ($candidates.Count -eq 0) {
+        return (New-WorkerCliSuccess -Data ([ordered]@{
+            status = "blocked"; error_code = "NO_READY_NATIVE_PROVIDER"; runtime_type = "native-provider"
+            candidates = @(); next_action = "configure"
+        }))
+    }
+
+    $selected = $null
+    $selection = ""
+    if ($candidates.Count -eq 1) {
+        $selected = $candidates[0]
+        $selection = "auto-unique-ready"
+    }
+    else {
+        $scored = @($candidates | ForEach-Object {
+                [pscustomobject]@{ candidate = $_; score = Get-NativeProviderTaskMatchScore -Candidate $_ -Task $Task }
+            })
+        $maxScore = @($scored | Measure-Object -Property score -Maximum).Maximum
+        $best = @($scored | Where-Object { $_.score -eq $maxScore })
+        if ($maxScore -gt 0 -and $best.Count -eq 1) {
+            $selected = $best[0].candidate
+            $selection = "auto-task-match"
+        }
+    }
+
+    if ($null -eq $selected) {
+        return (New-WorkerCliSuccess -Data ([ordered]@{
+            status = "selection-required"; error_code = "NATIVE_WORKER_SELECTION_REQUIRED"
+            runtime_type = "native-provider"; candidates = @($candidates | ForEach-Object { ConvertTo-PublicNativeProviderCandidate -Candidate $_ })
+            next_action = "choose a native worker/profile or name its provider/model in the task"
+        }))
+    }
+
+    $result = Invoke-WorkerDispatch -WorkerId ([string]$selected.worker_id) -ProfileId ([string]$selected.profile_id) `
+        -Task $Task -CodexHome $CodexHome -CredentialScope $CredentialScope
+    if ($result.ok -and $result.data.status -eq "dispatch-ready") {
+        $result.data["selection"] = $selection
+    }
+    return $result
+}
+
 function Invoke-WorkerUninstall {
     param(
         [Parameter(Mandatory = $true)][string]$WorkerId,
@@ -643,8 +779,16 @@ function Invoke-WorkerCommand {
             $result = Invoke-WorkerDoctor -WorkerId $positional[0] -ProfileId $options["--profile"] -CodexHome $codexHome -CredentialScope $credentialScope
         }
         "dispatch" {
-            if ($positional.Count -lt 1) { throw "relay worker: 'dispatch' requires a worker id" }
-            $result = Invoke-WorkerDispatch -WorkerId $positional[0] -ProfileId $options["--profile"] -Task $task -CodexHome $codexHome -CredentialScope $credentialScope
+            if ([bool]$options["auto"]) {
+                if ($positional.Count -gt 0 -or $options.ContainsKey("--profile")) {
+                    throw "relay worker: 'dispatch --auto' cannot be combined with a worker id or --profile"
+                }
+                $result = Invoke-WorkerAutoDispatch -Task $task -CodexHome $codexHome -CredentialScope $credentialScope
+            }
+            else {
+                if ($positional.Count -lt 1) { throw "relay worker: 'dispatch' requires a worker id or --auto" }
+                $result = Invoke-WorkerDispatch -WorkerId $positional[0] -ProfileId $options["--profile"] -Task $task -CodexHome $codexHome -CredentialScope $credentialScope
+            }
         }
         "uninstall" {
             if ($positional.Count -lt 1) { throw "relay worker: 'uninstall' requires a worker id" }
@@ -676,4 +820,4 @@ function Invoke-WorkerCommand {
     return 0
 }
 
-Export-ModuleMember -Function Invoke-WorkerCommand, Get-NativeProviderReadiness, Invoke-WorkerList, Invoke-WorkerShow, Invoke-WorkerStatus, Invoke-WorkerConfigure, Invoke-WorkerCredential, Invoke-WorkerDoctor, Invoke-WorkerDispatch, Invoke-WorkerUninstall
+Export-ModuleMember -Function Invoke-WorkerCommand, Get-NativeProviderReadiness, Invoke-WorkerList, Invoke-WorkerShow, Invoke-WorkerStatus, Invoke-WorkerConfigure, Invoke-WorkerCredential, Invoke-WorkerDoctor, Invoke-WorkerDispatch, Invoke-WorkerAutoDispatch, Invoke-WorkerUninstall
