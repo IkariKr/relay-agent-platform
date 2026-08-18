@@ -5,7 +5,7 @@
 </p>
 
 > **Main Agent focuses on Planning & Decisions 🧠 ｜ Subagents & CLIs handle Execution ⚙️**  
-> Seamlessly run DeepSeek & Gemini as native Codex subagents, and thin-relay to Claude Code, OpenCode, and Antigravity CLIs. Keep your main context clean and slash Token costs!
+> Seamlessly dispatch to verified Codex native subagents (e.g. DeepSeek-V4) and thin-relay to Claude Code, OpenCode, and Antigravity CLIs. Reduce parent-context bloat for delegated tasks!
 
 [![Tests](https://img.shields.io/badge/Pester%20Tests-152%2F152%20Passing-brightgreen?style=flat-square&logo=powershell)](docs/test-matrix.md)
 [![Codex](https://img.shields.io/badge/Codex%20Native-Supported-blue?style=flat-square)](docs/codex-native-subagent-roadmap.md)
@@ -15,29 +15,29 @@
 
 ## 🎯 Why Relay?
 
-When building complex projects in Codex, developers often face three common pain points:
+When building complex projects in Codex, developers often face three common challenges:
 
-1. **Context Pollution & Attention Dilution**: A single large model handles both high-level system design and low-level code iterations, console errors, and intermediate debug logs. High-volume, low-density noise not only drains tokens rapidly but also dilutes the model's attention weights, leading to context drift and degraded high-level reasoning.
-2. **Lack of Native, Cost-Effective Subagents**: Connecting affordable and powerful third-party models (like DeepSeek or Gemini) as worker subagents typically requires tedious manual configuration without standard host support.
-3. **Fragmented CLI Workflows**: Switching between Claude Code, OpenCode, or Antigravity CLIs is disjointed—parameter formats differ, environments are isolated, and collecting structured outputs is difficult.
+1. **Context Pollution & Attention Dilution**: A single model handling both high-level system design and low-level code iterations, console errors, and intermediate debug logs can suffer from diluted attention weights, leading to context drift and degraded high-level reasoning.
+2. **Lack of Standard Native Subagent Ingestion**: Integrating third-party Responses-compatible providers as worker subagents typically requires tedious manual configuration without standard host support.
+3. **Fragmented CLI Workflows**: Switching between Claude Code, OpenCode, or Antigravity CLIs is disjointed—parameter formats differ, environments are isolated, and raw output streams require manual forwarding.
 
 > 💡 **Relay provides a unified Worker Runtime Dispatcher:**  
-> Delegate concrete tasks to third-party native subagents or external CLI tools while your main model receives only concise summaries and final artifacts. **Prevent low-signal details from polluting the main context, keep the model's attention laser-focused on architecture and critical decisions, and slash Token costs!**
+> Delegate concrete tasks to native subagents or external CLI tools while your main model retains high-level review and final decisions. **Prevent low-signal details from polluting the main context and reduce unnecessary parent-context growth!**
 
 ---
 
 ## ✨ Key Features
 
 ### 1️⃣ 🧬 Codex Native-Provider (Subagent)
-- **True Native Child Lifecycle**: Built on Codex's native `spawn_agent` / `wait` / `send_input` protocol—zero hacks, zero hooks.
-- **Plug-and-Play Cost-Effective Models**: Instantly connect **DeepSeek-V4**, **Gemini-3.7**, and other Responses-compatible providers as dedicated Subagents. Heavy tasks go to subagents; high-level code review stays with the main agent.
+- **Native Child Integration**: Built on Codex's native `spawn_agent` / `wait` / `send_input` protocol without custom hooks or monkey-patching.
+- **Provider Pack Support**: **DeepSeek-V4** has verified live native-child evidence on specific host/provider/model combinations. Additional packs like **Gemini-3.7** are available and configured for runtime validation.
 
 ### 2️⃣ 🚀 Unified External-CLI Relay
-- **Seamless Multi-Backend Execution**: A single unified entrypoint directly triggers **Claude Code**, **OpenCode**, and **Antigravity** native CLIs.
+- **Multi-Backend Forwarding**: A single unified entrypoint directly triggers **Claude Code**, **OpenCode**, and **Antigravity** native CLIs.
 - **Transparent Streaming & Exit Codes**: Real-time incremental log mirroring, raw command forwarding, and accurate exit-code passthrough.
 
 ### 3️⃣ 🛡️ Secure Credential & Config Isolation
-- **Token-Aware Redaction & Safe Ingestion**: API keys are passed via secure `stdin` streams and automatically redacted in logs—never leaking secrets to command-line histories or disk files.
+- **Token-Aware Redaction & Safe Ingestion**: API keys are ingested via interactive masked prompts or secure `--api-key-stdin` pipes and automatically redacted in logs—never leaking secrets to command-line histories or disk files.
 - **Standard Worker Registry**: Extensible via declarative Worker Packs, complete with one-click health checks (`worker doctor`).
 
 ---
@@ -65,21 +65,25 @@ Send the following in Codex, and Relay's skill protocol will handle the secure c
 ```text
 Please configure DeepSeek as a Relay native subagent:
 - Base URL: https://xxx.example.com/v1
-- Model ID: deepseek-v4-flash
+- Model ID: deepseek-v4-flash-response
 - API Key: <your-api-key>
 ```
 
-#### Method B: Manual CLI Configuration
-Securely inject your API key via stdin (no plaintext secrets stored):
+#### Method B: Manual CLI Configuration (Masked Credential Flow)
+Configure provider parameters, then set credentials via masked interactive prompt:
 ```powershell
-# 1. List available workers
-.\scripts\relay.ps1 worker list
+# 1. Configure provider overlay
+.\scripts\relay.ps1 worker configure deepseek-v4-flash `
+  --profile default `
+  --base-url "https://xxx.example.com/v1" `
+  --model "deepseek-v4-flash-response" `
+  --non-interactive --json
 
-# 2. Configure provider safely
-"sk-your-api-key" | .\scripts\relay.ps1 worker configure deepseek-v4-flash --base-url "https://xxx.example.com/v1" --model "deepseek-v4-flash"
+# 2. Safely set credential (masked prompt, not saved in history)
+.\scripts\relay.ps1 worker credential set deepseek-v4-flash --profile default
 
 # 3. Run health check
-.\scripts\relay.ps1 worker doctor deepseek-v4-flash
+.\scripts\relay.ps1 worker doctor deepseek-v4-flash --profile default
 ```
 
 ---
@@ -106,11 +110,11 @@ Please call Claude Code CLI to refactor this helper function.
 
 ## 📦 Family of Skills
 
-> 💡 **Recommendation**: In Codex, **we strongly recommend using `relay-agent` directly (or @relay)** to leverage smart auto-routing and the dual Native + CLI execution engines. The single-backend skills invoke their respective native CLIs by default.
+> 💡 **Recommendation**: In Codex, **we strongly recommend using `relay-agent` directly (or @relay)**. Relay provides two explicit execution paths: Codex native-provider dispatch and thin external-CLI relay. Native auto-selection is conservative and fails closed when candidates are ambiguous.
 
 | Skill Name | Default Mode | Role & Best Use Cases |
 | :--- | :--- | :--- |
-| 👑 **`relay-agent`** | **Dual Engine (Recommended ⭐⭐⭐⭐⭐)** | **Unified Dispatcher**: Full Worker lifecycle management, auto-routing, and on-demand dispatching to Native subagents or External CLIs |
+| 👑 **`relay-agent`** | **Dual Path (Recommended ⭐⭐⭐⭐⭐)** | **Unified Dispatcher**: Worker lifecycle management, conservative dispatching, and execution via Native subagents or External CLIs |
 | 🟣 **`relay-claude`** | **Native CLI (`claude`)** | **Claude Code Dedicated**: Minimal thin-relay layer forwarding commands directly to the `claude` CLI |
 | 🟢 **`relay-opencode`** | **Native CLI (`opencode`)** | **OpenCode Dedicated**: Dedicated execution channel calling `opencode run` |
 | 🔵 **`relay-antigravity`** | **Native CLI (`antigravity`)** | **Antigravity Dedicated**: Dedicated execution channel calling `antigravity` CLI |
@@ -139,7 +143,7 @@ Please call Claude Code CLI to refactor this helper function.
   └───────────────┬─────────┘ └────┬──────────────────────────┘
                   │                │
                   └────────┬───────┘
-                           ▼ Returns only summaries & artifacts
+                           ▼ Returns raw worker output & artifacts
              [ Codex Main Agent Review & Accept ]
 ```
 
@@ -147,14 +151,14 @@ Please call Claude Code CLI to refactor this helper function.
 
 ## ⚠️ Notes & Limitations
 
-When using **External-CLI mode**, please keep in mind:
+When choosing between execution modes, please keep in mind:
 
-1. 🔑 **Prior CLI Authentication Required**:
+1. 🔑 **Prior CLI Authentication Required for External-CLI**:
    - Ensure you are already logged in to the target CLI tool (Claude Code / OpenCode / Antigravity) in your terminal.
    - If unauthenticated, the CLI will fail or prompt for credentials; Relay will surface this error and remind you to authenticate first.
-2. 🙈 **Internal Thinking (CoT) Is Not Visible**:
-   - External-CLI mode acts as a thin execution proxy. The main session captures stdout/stderr and exit codes, **but cannot inspect hidden reasoning tokens (Chain of Thought)**.
-   - For full conversation history and interactive reasoning, use **Native-Provider (Subagent mode)**.
+2. 🙈 **Hidden Reasoning (CoT) Visibility**:
+   - External-CLI mode acts as a thin execution proxy and returns raw stdout/stderr without hidden reasoning tokens.
+   - Use **Codex Native-Provider mode** when you want Codex-managed child lifecycle, progress visibility, and provider isolation.
 
 ---
 
@@ -176,5 +180,5 @@ We welcome contributions, feature requests, and bug reports!
 ---
 
 <p align="center">
-  <sub>#AIAgent #Codex #Subagent #ClaudeCode #DeepSeek #Gemini #DeveloperTools #TokenOptimization</sub>
+  <sub>#AIAgent #Codex #Subagent #ClaudeCode #DeepSeek #Gemini #DeveloperTools #ContextManagement</sub>
 </p>

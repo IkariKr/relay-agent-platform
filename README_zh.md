@@ -5,7 +5,7 @@
 </p>
 
 > **主模型专注决策规划 🧠 ｜ 子代理与 CLI 负责落地执行 ⚙️**  
-> 支持在 Codex 中无缝拉起 DeepSeek、Gemini 原生子代理，一键中继 Claude Code、OpenCode、Antigravity CLI。保持上下文干净，大幅节省 Token 消耗！
+> 支持在 Codex 中分流至已验证的原生子代理（如 DeepSeek-V4），一键中继 Claude Code、OpenCode、Antigravity CLI。有效减缓主上下文膨胀！
 
 [![Tests](https://img.shields.io/badge/Pester%20Tests-152%2F152%20Passing-brightgreen?style=flat-square&logo=powershell)](docs/test-matrix.md)
 [![Codex](https://img.shields.io/badge/Codex%20Native-Supported-blue?style=flat-square)](docs/codex-native-subagent-roadmap.md)
@@ -17,27 +17,27 @@
 
 在日常使用 Codex 进行复杂项目开发时，经常会遇到这几个核心问题：
 
-1. **上下文污染与注意力分散（Attention Dilution）**：单一大模型既要做高层架构拆解，又要在主会话里塞满海量具体代码、控制台报错和调试日志。大量低信息密度的噪音不仅导致 Token 消耗极快，更会稀释大模型的注意力权重，导致后续高层决策时产生遗忘或推理漂移。
-2. **缺乏原生高性价比 Subagent 支持**：想要接入便宜又好用的 DeepSeek、Gemini 等第三方模型充当打工子代理，手写配置繁琐且缺乏官方标准支持。
+1. **上下文污染与注意力分散（Attention Dilution）**：单一大模型既要做高层架构拆解，又要在主会话里塞满海量具体代码、控制台报错和调试日志。大量低信息密度的噪音会稀释大模型的注意力权重，导致后续高层决策时产生遗忘或推理漂移。
+2. **缺乏标准第三方 Subagent 接入途径**：想要接入便宜好用的第三方 Responses-compatible 模型充当打工子代理，手写配置繁琐且缺乏官方统一标准。
 3. **跨 CLI 工具调度割裂**：想临时调用 Claude Code、OpenCode 或 Antigravity CLI 协助跑特定任务，各工具间参数不通、环境割裂、输出难以规范收集。
 
 > 💡 **Relay 提供统一的 Worker Runtime 调度层：**  
-> 将具体任务委派给第三方原生子代理或外部 CLI 工具执行，主模型仅接收精简摘要与最终产物。**避免低信噪比细节污染主上下文，保持大模型注意力始终聚焦在全局设计与决策上，同时大幅降低 Token 成本！**
+> 将具体任务委派给原生子代理或外部 CLI 工具执行，主模型负责审查与最终验收。**避免低信噪比细节污染主上下文，有效减缓主会话上下文的不必要增长！**
 
 ---
 
 ## ✨ 核心能力一览
 
 ### 1️⃣ 🧬 Codex 原生 Native-Provider（子代理）
-- **真·原生通信**：基于 Codex 原生 `spawn_agent` / `wait` / `send_input` 机制，无需 Hook 或侵入式修改。
-- **高性价比模型即插即用**：零门槛接入 **DeepSeek-V4**、**Gemini-3.7** 等第三方模型作为专属 Subagent，重活累活交给子代理，主模型专注高层审查。
+- **原生通信协议**：基于 Codex 原生 `spawn_agent` / `wait` / `send_input` 机制，无需 Hook 或侵入式修改。
+- **Provider Pack 扩展支持**：**DeepSeek-V4** 已在特定 Codex/Provider/Model 组合下完成真实 Native Child 全链路验证；**Gemini-3.7** 等 Worker Pack 已就绪并支持运行时验证。
 
 ### 2️⃣ 🚀 外部 CLI 统一中继（External-CLI）
 - **多后端无缝调用**：一条统一入口直接调起 **Claude Code**、**OpenCode**、**Antigravity** 原生 CLI。
 - **透明日志与状态流转**：实时增量日志镜像、命令与退出码原汁原味透传，排错轻松明了。
 
 ### 3️⃣ 🛡️ 安全与配置隔离
-- **凭据标准注入**：API Key 通过安全管道（stdin）传入并自动做 Token 级脱敏，防止凭证泄漏到历史命令行与本地日志。
+- **凭据标准注入**：支持交互式 Masked 录入或安全 `--api-key-stdin` 管道，自动做 Token 级脱敏，防止凭证泄漏到历史命令行与本地日志。
 - **统一 Worker 注册表**：通过标准 Worker Pack 扩展模型，开箱即用，支持一键健康体检（`worker doctor`）。
 
 ---
@@ -65,21 +65,25 @@
 ```text
 帮我把 DeepSeek 配置为 Relay 的原生子代理：
 - Base URL: https://xxx.example.com/v1
-- Model ID: deepseek-v4-flash
+- Model ID: deepseek-v4-flash-response
 - API Key: <你的 API Key>
 ```
 
-#### 方式 B：使用命令行手动配置
-通过标准输入安全注入密钥（API Key 走标准输入，不留痕）：
+#### 方式 B：使用命令行手动配置（交互式安全录入）
+先写入配置元数据，再通过交互式 Masked 命令行录入密钥：
 ```powershell
-# 1. 查看可用 Worker 列表
-.\scripts\relay.ps1 worker list
+# 1. 写入 Worker 配置元数据
+.\scripts\relay.ps1 worker configure deepseek-v4-flash `
+  --profile default `
+  --base-url "https://xxx.example.com/v1" `
+  --model "deepseek-v4-flash-response" `
+  --non-interactive --json
 
-# 2. 安全配置 Provider
-"sk-your-api-key" | .\scripts\relay.ps1 worker configure deepseek-v4-flash --base-url "https://xxx.example.com/v1" --model "deepseek-v4-flash"
+# 2. 安全录入凭证（交互式隐藏输入，不留命令历史）
+.\scripts\relay.ps1 worker credential set deepseek-v4-flash --profile default
 
 # 3. 运行健康检查验证连通性
-.\scripts\relay.ps1 worker doctor deepseek-v4-flash
+.\scripts\relay.ps1 worker doctor deepseek-v4-flash --profile default
 ```
 
 ---
@@ -106,11 +110,11 @@
 
 ## 📦 家族 Skill 模块一览
 
-> 💡 **使用建议**：在 Codex 中**强烈推荐直接使用 `relay-agent`（或直接 @relay）**，享受自动路由与原生 Subagent + CLI 的全能调度能力。三个单后端包默认直接调用底层原生 CLI。
+> 💡 **使用建议**：在 Codex 中**强烈推荐直接使用 `relay-agent`（或直接 @relay）**。Relay 明确区分 Native 子代理派发与 External-CLI 中继两条路径；原生自动派发采取保守策略，存在歧义时自动 fail closed 提示用户。
 
 | Skill 包名 | 默认执行模式 | 定位与适用场景 |
 | :--- | :--- | :--- |
-| 👑 **`relay-agent`** | **智能双引擎（推荐 ⭐⭐⭐⭐⭐）** | **统一调度总入口**：支持 Worker 注册管理、自动路由，可按需拉起 Native 原生子代理或 External-CLI 极速执行 |
+| 👑 **`relay-agent`** | **双路径分流（推荐 ⭐⭐⭐⭐⭐）** | **统一调度总入口**：支持 Worker 注册管理、保守派发，可按需拉起 Native 原生子代理或 External-CLI 极速执行 |
 | 🟣 **`relay-claude`** | **默认原生 CLI (`claude`)** | **Claude Code 专用包**：专为 Claude Code CLI 调优的极简薄执行层，直接透传命令给 `claude` CLI |
 | 🟢 **`relay-opencode`** | **默认原生 CLI (`opencode`)** | **OpenCode 专用包**：直接调用 `opencode run` 命令行工具的专用中继通道 |
 | 🔵 **`relay-antigravity`** | **默认原生 CLI (`antigravity`)** | **Antigravity 专用包**：直接调用 `antigravity` 原生命令行工具的专用接入通道 |
@@ -139,7 +143,7 @@
   └────────────┬────────────┘ └────┬─────────────────────────┘
                │                   │
                └─────────┬─────────┘
-                         ▼ 仅返回摘要与执行产物
+                         ▼ 返回原始执行输出与产物供主模型审查
              【 Codex 主模型复核与验收 】
 ```
 
@@ -147,14 +151,14 @@
 
 ## ⚠️ 使用须知与限制说明
 
-在使用 **External-CLI（外部命令行模式）** 时，请留意以下几点：
+在选用不同执行模式时，请留意以下几点：
 
-1. 🔑 **需提前完成 CLI 登录认证**：
+1. 🔑 **External-CLI 需提前完成登录认证**：
    - 首次使用外部后端（Claude Code / OpenCode / Antigravity）前，请确保已在终端对应工具中完成登录或环境凭据配置。
    - 若未登录，CLI 会直接报错或提示认证缺失，Relay 会原样捕获并提醒你先完成对应 CLI 的登录。
-2. 🙈 **CLI 模式无法查看内部思考过程（CoT）**：
-   - External-CLI 属于黑盒式极速执行中继，主会话仅能实时捕获该命令的标准输出、错误日志与退出状态，**无法看到底层模型未公开的内部推理/思考过程（Thinking Tokens）**。
-   - 如需查看完整的推理交互和多轮会话上下文，推荐使用 **Native-Provider（原生子代理模式）**。
+2. 🙈 **内部推理过程（CoT）可见性**：
+   - External-CLI 属于薄中继层，转发原始输出与退出状态，无法看到未公开的底层模型内部思考过程（Thinking Tokens）。
+   - 如需利用 Codex 原生管理的子代理生命周期、进度可见性与 Provider 隔离，请选用 **Native-Provider 模式**。
 
 ---
 
@@ -176,5 +180,5 @@
 ---
 
 <p align="center">
-  <sub>#AI编程 #Codex #Subagent #ClaudeCode #DeepSeek #Gemini #开发效率 #Token优化</sub>
+  <sub>#AI编程 #Codex #Subagent #ClaudeCode #DeepSeek #Gemini #开发效率 #上下文管理</sub>
 </p>
