@@ -163,10 +163,10 @@ These are intentionally deferred unless they become release blockers:
 ### Documentation Gaps
 
 - Closed in current repo state through:
-  - `docs/installation.md`
-  - `docs/troubleshooting.md`
+  - `docs/Archive/installation.md`
+  - `docs/Archive/troubleshooting.md`
   - `docs/v1.0.0-release-notes.md`
-  - `docs/package-selection.md`
+  - `docs/Archive/package-selection.md`
 
 ### Release Process Gaps
 
@@ -238,11 +238,11 @@ Objective: make the project externally understandable without repository archaeo
 
 Deliverables:
 
-- `docs/quickstart.md`
-- `docs/installation.md`
-- `docs/routing-guide.md`
-- `docs/troubleshooting.md`
-- `docs/package-selection.md`
+- `docs/Archive/quickstart.md`
+- `docs/Archive/installation.md`
+- `docs/Archive/routing-guide.md`
+- `docs/Archive/troubleshooting.md`
+- `docs/Archive/package-selection.md`
 - `docs/release-checklist.md`
 
 Acceptance criteria:
@@ -375,19 +375,19 @@ The following are explicitly not part of the frozen `v1` public contract:
 
 Minimum required docs for release:
 
-- `docs/architecture.md`
+- `docs/Archive/architecture.md`
   Maintainer-oriented structure and generation model.
 - `docs/v1-roadmap.md`
   Release scope and milestone contract.
-- `docs/package-selection.md`
+- `docs/Archive/package-selection.md`
   Which package to use and why.
-- `docs/installation.md`
+- `docs/Archive/installation.md`
   Prerequisites, install steps, verification steps.
-- `docs/quickstart.md`
+- `docs/Archive/quickstart.md`
   First-run examples for Claude, OpenCode, and Agent.
-- `docs/routing-guide.md`
+- `docs/Archive/routing-guide.md`
   Auto routing behavior, config precedence, rule format, examples.
-- `docs/troubleshooting.md`
+- `docs/Archive/troubleshooting.md`
   PATH issues, missing backend, config mismatch, routing surprises, encoding concerns.
 - `docs/release-checklist.md`
   Rebuild, validate, smoke test, tag, and publish checklist.

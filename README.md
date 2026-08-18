@@ -1,5 +1,7 @@
 # Relay
 
+> Relay for Codex · Codex 原生子代理中继层
+
 > Relay is the new name for the former `codex-delegate-*` skill family.
 >
 > 把 agent 变成可控执行层，而不是失控自动驾驶。
@@ -89,17 +91,18 @@
 - `relay-antigravity`
   只走 Antigravity CLI 的专用包
 
-如果你是第一次接触 external-cli 路线，请从薄入口 `scripts/run_relay.ps1` 开始。第三方模型的 Codex native child 能力只有在对应 worker 通过 capability probe 与 native identity/provider/callback smoke test 后，才会在发布文档中标记为 supported。
+如果你是第一次接触 external-cli 路线，请从薄入口 `scripts/relay.ps1 run` 开始（旧入口 `scripts/run_relay.ps1` 仍作为兼容层可用）。第三方模型的 Codex native child 能力只有在对应 worker 通过 capability probe 与 native identity/provider/callback smoke test 后，才会在发布文档中标记为 supported。
 
 ### Roadmap 状态
 
 当前实现状态与目标语法必须分开看：
 
-- external-cli Backend Registry / Surface 架构已存在，`scripts/run_relay.ps1` 是当前真实可用薄入口；
-- Thin Relay v2 仍有 Phase 0 加固项需要完成，尤其是 `--log-dir` 实时 mirror、token-aware redaction 与进程级契约测试；
-- Worker Runtime Registry（A1）和 CodeX host / Codex capability probe（A2）尚未作为 runtime 代码落地；
-- DeepSeek 等第三方 `native-provider` 目前仍是计划能力，**尚不能称为 supported native child**；
-- README 只有在 Thin Relay canonical `relay` entrypoint 对应 Phase exit gate 通过后，才会把示例从 `run_relay.ps1` 切换到 `relay run`，避免文档先于代码。
+- external-cli Backend Registry / Surface 架构已存在，canonical 入口 `scripts/relay.ps1 run` 已可用（`scripts/run_relay.ps1` 为兼容入口）；
+- Thin Relay v2 Phase 0 已收口：`--log-dir` 实时 mirror、token-aware redaction、进程级契约测试均已落地并有测试证据；
+- Worker Runtime Registry（A1）、CodeX host / Codex capability probe（A2）、DeepSeek pack + preflight（B1）、Dispatch Policy（C）、第二 provider 零核心特判（D）、host adapter（E）均已落地（137 项确定性测试，由 `scripts/test.ps1` 一键复现，evidence 见 `docs/evidence/test-run/`）；
+- **B2 已完成**：codex-cli 0.147.0 原生 plaintext transport 验证通过——marker 经 native child 往返，`spawn_agent` / `wait` / `send_input` / `close_agent`（原生 cancel）全部可用，**无需 Hook**（roadmap 首选路径）；B3 未进入；
+- **B4 paid native smoke 已通过**（仅限已验证组合）：codex-cli 0.147.0 + `custom`（`nexus.ikarikore.top/v1`，wire_api=responses）+ `deepseek-v4-flash-response` + `[agents.deepseek-v4-flash]` 注册（证据：`docs/evidence/transport/b4-native-child-2026-08-14.md` 及 jsonl）。**P0-4/P0-5 已完成**：产品化 profile-suffixed role（`[agents.<worker>--<profile>]`，由 `relay worker configure` 生成）的 native child 全链路（spawn/wait/send_input/close_agent + marker 往返）已在 codex-cli 0.147.0 与 Codex Desktop 26.810.6296.0（bundled codex-cli 0.148.0-alpha.9）各自独立验收通过（证据：`b4-native-child-profile-suffix-2026-08-15.md`、`b4-native-child-desktop-2026-08-15.md`）。按 roadmap §8.1/§9 语言规则，上述组合下 DeepSeek 可称 **supported Codex native child**；其他版本/模型/宿主必须各自重跑验收，不得自动外推；
+- 示例已切换到 canonical `relay run`；`run_relay.ps1` 作为兼容入口保留，按 SOP Phase 3 弃用。
 
 能力声明门槛见 [CodeX Native Subagent 优先路线图](docs/codex-native-subagent-roadmap.md#81-phase--release--claim-gate)，跨阶段测试索引见 [测试矩阵](docs/test-matrix.md)。
 
@@ -116,7 +119,7 @@
 2. 使用（显式选择后端）
 
 ```text
-./scripts/run_relay.ps1 -Backend opencode -Model opencode/deepseek-v4-flash-free -Prompt "<你的任务>"
+./scripts/relay.ps1 run --backend opencode --model opencode/deepseek-v4-flash-free -- "<你的任务>"
 ```
 
 Relay 会打印并执行可复制的原生 OpenCode 命令；Codex 负责后续 review。
@@ -129,15 +132,32 @@ Relay 会打印并执行可复制的原生 OpenCode 命令；Codex 负责后续 
 
 这样进度、上下文、中断和后续决策由 Codex UI 管理，Relay 不再模拟这些能力。
 
+4. 配置并调度 native-provider worker（DeepSeek / 其他 Responses-compatible provider）
+
+```text
+帮我把 DeepSeek 配成 relay 的原生 subagent。
+Base URL: https://nexus.example.com/v1
+Model ID: deepseek-v4-flash-response
+API Key: <secret>
+```
+
+安装 `relay-agent` skill 的 Agent 会按 skill 协议自动运行 `relay worker list → status → configure（API Key 走 stdin）→ doctor → dispatch`；用户不需要理解 Codex TOML、provider 注册或环境变量命名。全部 worker 命令都提供稳定 `--json` 合同，API Key 永远不进入命令行参数或输出：
+
+```text
+./scripts/relay.ps1 worker list --json
+./scripts/relay.ps1 worker status deepseek-v4-flash --json
+./scripts/relay.ps1 worker doctor deepseek-v4-flash --json
+```
+
 如果你想把边界收得更紧，也支持继续补参数，比如 `backend`、`model`、`prompt`。
 
 ### 使用者继续往下看
 
-- [docs/quickstart.md](docs/quickstart.md)
-- [docs/thin-relay-v2-sop.md](docs/thin-relay-v2-sop.md)
+- [docs/Archive/quickstart.md](docs/Archive/quickstart.md)
+- [docs/Archive/thin-relay-v2-sop.md](docs/Archive/thin-relay-v2-sop.md)
 - [docs/codex-native-subagent-roadmap.md](docs/codex-native-subagent-roadmap.md)
-- [docs/package-selection.md](docs/package-selection.md)
-- [docs/troubleshooting.md](docs/troubleshooting.md)
+- [docs/Archive/package-selection.md](docs/Archive/package-selection.md)
+- [docs/Archive/troubleshooting.md](docs/Archive/troubleshooting.md)
 
 ## 给维护者
 
@@ -188,17 +208,15 @@ Relay 会打印并执行可复制的原生 OpenCode 命令；Codex 负责后续 
 
 完整安装说明在这里:
 
-- [docs/installation.md](docs/installation.md)
+- [docs/Archive/installation.md](docs/Archive/installation.md)
 
 ### 维护者推荐阅读顺序
 
-- [docs/installation.md](docs/installation.md)
-- [docs/architecture.md](docs/architecture.md)
-- [docs/codex-native-subagent-roadmap.md](docs/codex-native-subagent-roadmap.md)
-- [docs/thin-relay-v2-sop.md](docs/thin-relay-v2-sop.md)
-- [docs/platform-architecture-v2.md](docs/platform-architecture-v2.md)（当前 external-cli 架构记录）
-- [docs/routing-guide.md](docs/routing-guide.md)
-- [docs/release-checklist.md](docs/release-checklist.md)
+- [docs/codex-native-subagent-roadmap.md](docs/codex-native-subagent-roadmap.md)（当前实施路线图）
+- [docs/test-matrix.md](docs/test-matrix.md)（跨阶段测试索引）
+- [docs/v1-roadmap.md](docs/v1-roadmap.md)（v1.0.0 发布计划，尚未发版）
+
+已实施/历史记录文档归档在 [docs/Archive/](docs/Archive/)：安装、quickstart、SOP、架构与迁移记录、包选择、路由指南、troubleshooting、发布清单、重命名与 fork 流程。
 
 ## 最后一句话
 

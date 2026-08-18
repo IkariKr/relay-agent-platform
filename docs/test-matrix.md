@@ -28,7 +28,7 @@
 
 ### 1.2 测试框架与 stub CLI 夹具
 
-- 测试运行器：**Pester v5 + Invoke-Pester**，作为 deterministic unit/contract 与 deterministic process 的统一入口。现有 `tests/thin-relay-contract.ps1` 手写断言可迁入 Pester 或保留为轻量冒烟入口，但新增测试一律走 Pester v5。
+- 测试运行器：统一入口 `scripts/test.ps1`（要求 pwsh 7.2+ 与 Pester `>=5 <7`，当前锁定 Pester 6.1.0）；runner 启动时校验 PowerShell / Pester 版本，不满足立即输出明确错误。`scripts/test.ps1 -ExportEvidence` 会把 PowerShell、Pester、OS、Codex build 与结果计数写入 `docs/evidence/test-run/`。CI 与 release checklist 只调用该 runner。现有 `tests/thin-relay-contract.ps1` 手写断言保留为轻量冒烟入口，新增测试一律走 Pester v5+。
 - stub CLI fixture：`tests/fixtures/stub-cli/` 提供 `opencode.cmd` / `claude.cmd` / `agy.cmd` 三个薄启动器，统一转调同一个 `stub-cli.ps1`；通过 `STUB_EXIT_CODE`、`STUB_STDOUT_LINE`、`STUB_STDERR_LINE` 环境变量控制输出与退出码。测试把 fixture 目录前置到 `$env:PATH`，从而覆盖命令解析、真实进程 spawn、stdout/stderr 分流、exit code、`--log-dir` mirror、CLI missing 与 redaction（TR-PROC-* / TR-LOG-* / TR-ONCE-* / TR-GIT-* / TR-SEC-*）。
 - stub fixture 只存在于测试上下文，不得进入 package 生成物。
 
@@ -130,11 +130,81 @@ Hook 只有在 B2 evidence 证明 native spawn/lifecycle 可用、task delivery 
 - 共用同一 host adapter、capability schema、transport 与 dispatch policy；
 - 若必须修改 core，必须解释是通用 contract 缺口还是 provider 特判，并优先修通用合同。
 
-## 8. 测试所有权
+## 8. Provider Profile & Credential（onboarding P0-A）
 
-- Thin Relay external-cli：`docs/thin-relay-v2-sop.md`
+| ID | 用例 | 类型 | Gate |
+|---|---|---|---|
+| NP-PROFILE-001 | Base URL / Model ID 可形成有效 profile | deterministic | 必须 |
+| NP-PROFILE-002 | profile 文件不含 secret 值，键名不含 secret 字段 | deterministic | 必须 |
+| NP-PROFILE-003 | 同一 worker 可存在多个 profile | deterministic | 必须 |
+| NP-PROFILE-004 | profile id 冲突 fail closed | deterministic | 必须 |
+| NP-PROFILE-005 | 删除一个 profile 不影响其他 profile | deterministic | 必须 |
+| NP-PROFILE-006 | 禁止 secret 字段被 schema 校验拒绝 | deterministic | 必须 |
+| NP-PROFILE-007 | 非法 base_url / credential_source 被拒绝 | deterministic | 必须 |
+| NP-CRED-001 | stdin secret 输入不回显 | deterministic | 必须 |
+| NP-CRED-002 | stdin 值可非交互设置 credential（env scope） | deterministic | 必须 |
+| NP-CRED-004 | stdout/JSON/文件输出不含 secret | deterministic | 必须 |
+| NP-CRED-005 | presence 报告只有 source + boolean | deterministic | 必须 |
+| NP-CRED-006 | credential remove 只删该 profile 拥有的 secret | deterministic | 必须 |
+| NP-CRED-007 | 失败异常不包含输入 secret | deterministic | 必须 |
+
+NP-CRED-003（不存在 `--api-key <value>` 参数）与 NP-CLI-* / NP-SKILL-* / NP-PKG-* / NP-RUN-* 由 onboarding P0-B/C/D/E 阶段补充。
+
+## 8.2 CLI / Agent contract（onboarding P0-C）
+
+| ID | 用例 | 类型 | Gate |
+|---|---|---|---|
+| NP-CLI-001 | worker list/status/configure/doctor/dispatch 支持 `--json` 且字段稳定 | deterministic | 必须 |
+| NP-CLI-002 | 缺失字段返回稳定 machine status + missing list（不 prompt） | deterministic | 必须 |
+| NP-CLI-003 | non-interactive 模式绝不偷偷 prompt | deterministic | 必须 |
+| NP-CLI-004 | 未 ready 的 dispatch fail closed 并给出 next_action | deterministic | 必须 |
+| NP-CLI-005 | dispatch 尊重显式 worker id（未知 worker → WORKER_NOT_FOUND） | deterministic | 必须 |
+| NP-CLI-006 | doctor 对未知 worker 报 `WORKER_NOT_FOUND`，不得误报 manifest=ok | deterministic | 必须 |
+| NP-CLI-007 | 同 worker 多 profile 且未显式选择时 fail closed（`PROFILE_SELECTION_REQUIRED`） | deterministic | 必须 |
+| NP-CRED-003 | 不存在 `--api-key <value>` 参数（内联 key 被拒绝） | deterministic | 必须 |
+| NP-CRED-007 | `--api-key=<secret>` 等号形式也安全拒绝，异常/输出不回显 secret | deterministic | 必须 |
+| NP-CRED-008 | 拼写错误/未知 option 即使携带 `=value` 也不在错误消息中回显 value | deterministic | 必须 |
+| NP-CLI-E2E | configure(stdin credential) → status ready → doctor → dispatch-ready → credential status/remove → uninstall --profile 全流程无付费调用、无 secret 泄漏 | deterministic | 必须 |
+
+## 8.1 Generation / ownership（onboarding P0-B）
+
+| ID | 用例 | 类型 | Gate |
+|---|---|---|---|
+| NP-GEN-001 | pack + profile 可生成合法 Codex agent overlay | deterministic | 必须 |
+| NP-GEN-002 | 生成配置使用 profile 的 Base URL / Model ID | deterministic | 必须 |
+| NP-GEN-003 | API Key 只以 credential source 引用出现，值不出现在生成物 | deterministic | 必须 |
+| NP-GEN-004 | 只增删 Relay-owned `[agents.*]` 注册段，主 Agent 全局 model/provider 保持不变 | deterministic | 必须 |
+| NP-GEN-005 | 遇到非 Relay-owned 同名配置时 fail closed | deterministic | 必须 |
+| NP-GEN-006 | uninstall 只清理 Relay-owned state / agent registration | deterministic | 必须 |
+| NP-GEN-007 | profile update 后可重生成配置 | deterministic | 必须 |
+| NP-GEN-008 | 非 Relay-owned 的同名 agent role 冲突时 fail closed | deterministic | 必须 |
+| NP-GEN-009 | `[agents.*]` 注册 install→remove round-trip 保留 UTF-8 BOM/行尾并恢复 config.toml 原始字节 | deterministic | 必须 |
+| NP-GEN-010 | agent role 冲突检测遵守 TOML key 大小写敏感语义（`[AGENTS.x]` 不等于 `[agents.x]`） | deterministic | 必须 |
+
+## 8.3 Skill protocol & package（onboarding P0-D）
+
+| ID | 用例 | 类型 | Gate |
+|---|---|---|---|
+| NP-SKILL-001 | generated `relay-agent/SKILL.md` 包含 native-provider discovery/config/execute 流程 | deterministic | 必须 |
+| NP-SKILL-002 | skill 明确禁止 command-line API key | deterministic | 必须 |
+| NP-SKILL-003 | skill description 能被“配置第三方 native subagent”意图发现 | deterministic | 必须 |
+| NP-SKILL-004 | 专用 external-cli surface 不暴露 native-provider onboarding | deterministic | 必须 |
+| NP-SKILL-005 | generated skill 为 `PROFILE_SELECTION_REQUIRED` / `AGENT_REGISTRATION_MISSING` 提供明确恢复动作 | deterministic | 必须 |
+| NP-PKG-001 | relay-agent package 自包含 registry/contracts/hosts/credentials/generation/cli 与 worker pack | deterministic | 必须 |
+| NP-PKG-002 | 干净 package 树内可直接运行 `worker list --json` | deterministic | 必须 |
+
+## 8.4 Onboarding E2E（onboarding P0-E）
+
+| ID | 用例 | 类型 | Gate |
+|---|---|---|---|
+| NP-E2E-S1 | 全新用户只提供 Base URL / Model ID / API Key：status needs-config → configure(stdin) → doctor ready → dispatch-ready → uninstall 回 needs-config | deterministic（零付费） | 必须 |
+| NP-E2E-S2 | 已有 profile 换模型：`--keep-credential` 不重输 key → doctor ready → dispatch 使用新 model | deterministic（零付费） | 必须 |
+
+## 9. 测试所有权
+
+- Thin Relay external-cli：`docs/Archive/thin-relay-v2-sop.md`
 - Worker/native-provider：`docs/codex-native-subagent-roadmap.md`
-- external-cli registry/build historical invariants：`docs/platform-architecture-v2.md`
+- external-cli registry/build historical invariants：`docs/Archive/platform-architecture-v2.md`
 - 本文件：跨文档唯一索引，不复制所有实现细节
 
 发布前应从本矩阵生成或人工核对 phase-specific checklist；任何 `supported native child` 声明都必须能回指到具体 evidence 与本矩阵中的 B4 gate。

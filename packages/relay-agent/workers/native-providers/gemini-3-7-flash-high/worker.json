@@ -1,0 +1,52 @@
+{
+  "id": "gemini-3-7-flash-high",
+  "display_name": "Gemini 3.7 Flash High",
+  "runtime_type": "native-provider",
+  "purpose": "read-only research and analysis delegation via a Codex native child",
+  "host_requirements": {
+    "codex_multi_agent": true,
+    "custom_provider_load": true
+  },
+  "data_boundary": {
+    "execution_boundary": "codex-native-child",
+    "egress": "external-transmit",
+    "sensitive_auto_dispatch": "deny-unless-explicitly-classified"
+  },
+  "permissions": {
+    "sandbox_mode": "read-only",
+    "write": false
+  },
+  "install_contract": {
+    "kind": "pack-owned-file-staging",
+    "agent_role": "gemini-3-7-flash-high",
+    "config_file": "agent.toml",
+    "owned_paths": [
+      "agents/relay/gemini-3-7-flash-high.toml"
+    ],
+    "note": "config.toml role registration requires verified Codex config format; Relay generates an owned profile-suffixed registration"
+  },
+  "health_check": {
+    "kind": "config-parse",
+    "checks": [
+      "agent.toml parses as TOML",
+      "credential env var present (value never read)"
+    ]
+  },
+  "smoke_test": {
+    "kind": "paid",
+    "required": true
+  },
+  "uninstall_contract": {
+    "kind": "pack-owned-only",
+    "owned_paths": [
+      "agents/relay/gemini-3-7-flash-high.toml"
+    ]
+  },
+  "provider": {
+    "provider_id": "gemini",
+    "model_id": "gemini-3.7-flash-high",
+    "wire_api": "responses",
+    "credential_source": "env:GEMINI_API_KEY",
+    "default_sandbox": "read-only"
+  }
+}

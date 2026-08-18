@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-08-15T08:55:13.4719736Z",
+  "runner": "scripts/test.ps1",
+  "powershell": "7.6.4",
+  "pester": "6.1.0",
+  "os": "Microsoft Windows NT 10.0.26200.0",
+  "codex": "codex-cli 0.141.0",
+  "path": "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\tests\\*.Tests.ps1",
+  "total": 91,
+  "passed": 91,
+  "failed": 0,
+  "skipped": 0,
+  "duration_ms": 27722
+}

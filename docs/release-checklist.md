@@ -13,7 +13,7 @@ For `v1`, the public surface includes:
 
 - package names
 - primary runtime and rule-management scripts
-- routing config schema documented in `docs/routing-guide.md`
+- routing config schema documented in `docs/Archive/routing-guide.md`
 
 ## Release Notes Convention
 
@@ -40,11 +40,11 @@ Before starting the release sequence:
 These docs must exist before `v1.0.0`:
 
 - `docs/v1-roadmap.md`
-- `docs/package-selection.md`
-- `docs/installation.md`
-- `docs/quickstart.md`
-- `docs/routing-guide.md`
-- `docs/troubleshooting.md`
+- `docs/Archive/package-selection.md`
+- `docs/Archive/installation.md`
+- `docs/Archive/quickstart.md`
+- `docs/Archive/routing-guide.md`
+- `docs/Archive/troubleshooting.md`
 - `docs/release-checklist.md`
 - `docs/v1.0.0-release-notes.md`
 
@@ -55,12 +55,14 @@ From the repo root:
 ```powershell
 .\scripts\build-packages.ps1
 .\scripts\validate-packages.ps1
+.\scripts\test.ps1 -ExportEvidence
 ```
 
 Expected result:
 
 - package generation succeeds
 - validation ends with `Package validation passed.`
+- deterministic suite passes and writes an evidence artifact to `docs/evidence/test-run/` (records PowerShell, Pester, OS and Codex build)
 
 ## Release Smoke Tests
 

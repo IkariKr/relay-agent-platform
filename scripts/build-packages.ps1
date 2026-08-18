@@ -82,6 +82,15 @@ function Get-GeneratedSkillMarkdown {
     $promptTemplate = Get-Content -Raw -LiteralPath (Join-Path $sharedRoot "docs\prompt-template.md")
     $backendNotes = Get-Content -Raw -LiteralPath (Join-Path $backendRoot "$($Surface.notes_backend)\skill-backend.md")
 
+    # native-provider onboarding 协议只注入统一入口（relay-agent）；专用 external-cli
+    # surface 不暴露 native-provider 配置能力（onboarding plan §5.1）。
+    # The native-provider onboarding protocol is injected only into the unified
+    # relay-agent surface; dedicated external-cli surfaces do not expose it.
+    $onboarding = ""
+    if ([string]$Surface.id -eq "agent" -and (Test-Path -LiteralPath (Join-Path $sharedRoot "docs\native-provider-onboarding.md"))) {
+        $onboarding = Get-Content -Raw -LiteralPath (Join-Path $sharedRoot "docs\native-provider-onboarding.md")
+    }
+
     @"
 ---
 name: $($Surface.package_name)
@@ -97,6 +106,8 @@ $workflow
 $backendNotes
 
 $promptTemplate
+
+$onboarding
 
 $review
 "@
@@ -172,6 +183,50 @@ function Sync-RegistryManifests {
     }
 }
 
+function Sync-NativeProviderRuntime {
+    # 统一入口（relay-agent）必须自包含 native-provider 能力：registry/contracts/
+    # hosts/credentials/generation/cli 模块与 worker pack（onboarding plan §8.1，
+    # NP-PKG-001）。安装 relay-agent 一个 skill 即可运行 worker list/configure/doctor。
+    # The unified relay-agent package must be self-contained for native-provider:
+    # registry/contracts/hosts/credentials/generation/cli modules plus worker packs.
+    param([Parameter(Mandatory = $true)][string]$DestinationPackageRoot)
+
+    foreach ($relativeDir in @(
+            "platform\registry",
+            "platform\contracts",
+            "platform\hosts",
+            "platform\credentials",
+            "platform\generation",
+            "platform\cli",
+            "workers\native-providers"
+        )) {
+        $sourceRoot = Join-Path $repoRoot $relativeDir
+        if (-not (Test-Path -LiteralPath $sourceRoot)) { continue }
+        foreach ($file in Get-ChildItem -Path $sourceRoot -Recurse -File) {
+            $relativePath = [System.IO.Path]::GetRelativePath($repoRoot, $file.FullName)
+            Copy-File `
+                -SourcePath $file.FullName `
+                -DestinationPath (Join-Path $DestinationPackageRoot $relativePath)
+        }
+    }
+
+    # B4 transport 与 capability report 必须一起随统一安装包发布；doctor 依赖两者对当前宿主 fail-closed 验证。
+    # Ship B4 transport and capability reports together; doctor relies on both for fail-closed host validation.
+    foreach ($relativeDir in @(
+            "docs\evidence\transport",
+            "docs\evidence\codex-capability"
+        )) {
+        $sourceRoot = Join-Path $repoRoot $relativeDir
+        if (-not (Test-Path -LiteralPath $sourceRoot)) { continue }
+        foreach ($file in Get-ChildItem -Path $sourceRoot -File) {
+            $relativePath = [System.IO.Path]::GetRelativePath($repoRoot, $file.FullName)
+            Copy-File `
+                -SourcePath $file.FullName `
+                -DestinationPath (Join-Path $DestinationPackageRoot $relativePath)
+        }
+    }
+}
+
 function Get-BackendRunnerSourcePath {
     param([Parameter(Mandatory = $true)][string]$BackendId)
 
@@ -240,6 +295,7 @@ foreach ($surface in @(Get-SurfaceManifests)) {
     if ([string]$surface.mode -eq "router") {
         Sync-PlatformRuntime -DestinationPackageRoot $packageRoot
         Sync-RegistryManifests -DestinationPackageRoot $packageRoot
+        Sync-NativeProviderRuntime -DestinationPackageRoot $packageRoot
     }
 
     Sync-BackendRunnersForSurface -Surface $surface

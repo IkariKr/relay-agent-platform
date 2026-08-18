@@ -2,7 +2,7 @@
 
 > 状态：实施路线图 / CodeX first  
 > 第一目标：把 DeepSeek 等第三方 Responses-compatible provider/model 作为 **真正的 Codex native child** 接入，而不是通过 CLI、SDK、MCP 或另一个 Codex 进程模拟 subagent。  
-> 与 [Thin Relay v2 SOP](thin-relay-v2-sop.md) 的关系：本路线图扩展 worker runtime；不恢复 Relay v1 的超时、自动重试、Git 轮询、JSONL 摘要或伪进度职责。  
+> 与 [Thin Relay v2 SOP](Archive/thin-relay-v2-sop.md) 的关系：本路线图扩展 worker runtime；不恢复 Relay v1 的超时、自动重试、Git 轮询、JSONL 摘要或伪进度职责。  
 > 参考实现：[Utopia-V/codex-deepseek-subagent](https://github.com/Utopia-V/codex-deepseek-subagent)。参考项目用于验证可行路径；Relay 必须把其 DeepSeek 专用实现抽象成可复用平台合同，而不是复制成新的特判。
 
 > [!NOTE]
@@ -125,7 +125,7 @@ sensitive_auto_dispatch = deny-unless-explicitly-classified
 
 ### 2.4 最终目标仓库结构
 
-完整目标结构只在本路线图定义；`platform-architecture-v2.md` 只记录已经实现的 external-cli 子层：
+完整目标结构只在本路线图定义；`Archive/platform-architecture-v2.md` 只记录已经实现的 external-cli 子层：
 
 ```text
 platform/
@@ -360,7 +360,7 @@ Codex 主 Agent
 
 ### Phase A0：Thin Relay v2 基线收口
 
-A0 **不重复拥有 external-cli 修复任务**。`--log-dir` 实时 mirror、命令脱敏、进程契约测试和 v1 行为清理均由 [Thin Relay v2 SOP](thin-relay-v2-sop.md) 的 Phase 0/1 负责。
+A0 **不重复拥有 external-cli 修复任务**。`--log-dir` 实时 mirror、命令脱敏、进程契约测试和 v1 行为清理均由 [Thin Relay v2 SOP](Archive/thin-relay-v2-sop.md) 的 Phase 0/1 负责。
 
 本路线图只把以下条件作为 native-provider 开工前置门槛：
 
@@ -491,7 +491,7 @@ Worker Dispatch
 
 ### 8.1 Phase → release / claim gate
 
-不在路线图中预先绑定具体 SemVer；版本号由 `docs/release-checklist.md` 的发布策略决定。这里绑定的是**能对外声称什么**：
+不在路线图中预先绑定具体 SemVer；版本号由 `docs/Archive/release-checklist.md` 的发布策略决定。这里绑定的是**能对外声称什么**：
 
 | Gate | 必要阶段 | 允许对外声明 |
 |---|---|---|

@@ -1,0 +1,89 @@
+{
+  "probe_schema_version": "1.0",
+  "probe_run_id": "6dc67eba328a43bea6437465fc328145",
+  "generated_at": "2026-08-14T07:07:40.7549026Z",
+  "host": {
+    "name": "win32",
+    "os_version": "10.0.19045",
+    "pwsh_version": "7.6.4"
+  },
+  "codex": {
+    "cli_version": "0.147.0",
+    "cli_source": "C:\\Users\\ckr2577\\AppData\\Roaming\\npm\\codex.ps1"
+  },
+  "capabilities": {
+    "host_identity": {
+      "status": "supported",
+      "detail": "codex cli 0.147.0 on PATH",
+      "evidence": [
+        "C:\\Users\\ckr2577\\AppData\\Roaming\\npm\\codex.ps1"
+      ]
+    },
+    "custom_agent_discovery": {
+      "status": "unknown",
+      "detail": "config.toml present: agents=False model_providers=True hooks=False; [agents] section absent (Codex may still support agent discovery)",
+      "evidence": []
+    },
+    "custom_provider_load": {
+      "status": "supported",
+      "detail": "config.toml present: agents=False model_providers=True hooks=False",
+      "evidence": [
+        "C:\\Users\\ckr2577\\.codex\\config.toml"
+      ]
+    },
+    "hook": {
+      "status": "unknown",
+      "detail": "config.toml present: agents=False model_providers=True hooks=False; [hooks] section absent (Codex may still support hooks)",
+      "evidence": []
+    },
+    "custom_agent_spawn": {
+      "status": "supported",
+      "detail": "live-verified: H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
+    },
+    "fork_isolation": {
+      "status": "supported",
+      "detail": "live-verified: H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
+    },
+    "native_wait_callback": {
+      "status": "supported",
+      "detail": "live-verified: H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
+    },
+    "native_cancel": {
+      "status": "supported",
+      "detail": "live-verified: H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
+    },
+    "plaintext_initial_message": {
+      "status": "supported",
+      "detail": "live-verified: H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
+    },
+    "plaintext_followup_message": {
+      "status": "supported",
+      "detail": "live-verified: H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
+    },
+    "hook_additional_context": {
+      "status": "supported",
+      "detail": "hook not used; native plaintext transport verified (preferred path)",
+      "evidence": [
+        "H:\\OneDrive\\Develop\\03_Tools\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl"
+      ]
+    }
+  }
+}

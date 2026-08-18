@@ -1,0 +1,32 @@
+name: thin-relay
+
+on:
+  push:
+    paths:
+      - "shared/**"
+      - "scripts/**"
+      - "backends/**"
+      - "tests/**"
+      - ".github/workflows/thin-relay.yml"
+  pull_request:
+    paths:
+      - "shared/**"
+      - "scripts/**"
+      - "backends/**"
+      - "tests/**"
+      - ".github/workflows/thin-relay.yml"
+
+jobs:
+  deterministic:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Pester
+        shell: pwsh
+        run: Install-Module Pester -Force -Scope CurrentUser -SkipPublisherCheck
+      - name: Run deterministic contract + process tests
+        shell: pwsh
+        run: |
+          Import-Module Pester
+          $result = Invoke-Pester -Path ./tests -Output Detailed -PassThru
+          if ($result.FailedCount -gt 0) { exit 1 }

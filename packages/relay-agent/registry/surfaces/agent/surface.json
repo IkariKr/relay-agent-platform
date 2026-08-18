@@ -2,9 +2,9 @@
   "id": "agent",
   "package_name": "relay-agent",
   "display_name": "Relay",
-  "description": "Thin multi-backend execution layer for Claude Code, OpenCode, and Antigravity that preserves native model and CLI controls.",
-  "short_description": "Run a chosen native backend without wrapper policy",
-  "default_prompt": "Use $relay-agent as a thin execution layer. Ask for an explicit backend, model, agent, and native parameters; preserve raw output for Codex review.",
+  "description": "Relay for Codex: configure and run native-provider workers as real Codex native children, plus thin external-cli workers (Claude Code, OpenCode, Antigravity). Use when the user wants to connect a custom provider/model, set Base URL/model/API key, or delegate a task with explicit control and review.",
+  "short_description": "Codex native subagents and external workers",
+  "default_prompt": "Use $relay-agent as a thin execution layer. When the user names a configured native provider/model, run native status -> dispatch -> Codex spawn_agent -> wait_agent; never send it to relay route/run or an external CLI. Without a named model, inspect ready native profiles and choose the one whose public purpose fits the task; use dispatch --auto for a unique or provider/model-name match, and ask only when candidates remain tied. Configure a native-provider from Base URL + Model ID + API Key (key via stdin only, never on the command line); preserve raw output for Codex review.",
   "mode": "router",
   "allowed_backends": [
     "claude",
@@ -14,6 +14,8 @@
   "public_scripts": [
     "backends/agent/run_delegate_agent.ps1",
     "scripts/run_relay.ps1",
+    "scripts/relay.ps1",
+    "scripts/relay.cmd",
     "scripts/route_relay.ps1",
     "backends/agent/manage_auto_routing.ps1",
     "backends/agent/manage_auto_routing_nl.ps1",
@@ -26,6 +28,6 @@
     }
   ],
   "package_root": "packages/relay-agent",
-  "doc_entry": "docs/routing-guide.md",
+  "doc_entry": "docs/Archive/routing-guide.md",
   "notes_backend": "agent"
 }

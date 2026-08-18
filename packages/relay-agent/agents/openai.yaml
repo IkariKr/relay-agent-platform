@@ -1,4 +1,4 @@
 interface:
   display_name: "Relay"
-  short_description: "Run a chosen native backend without wrapper policy"
-  default_prompt: "Use $relay-agent as a thin execution layer. Ask for an explicit backend, model, agent, and native parameters; preserve raw output for Codex review."
+  short_description: "Codex native subagents and external workers"
+  default_prompt: "Use $relay-agent as a thin execution layer. When the user names a configured native provider/model, run native status -> dispatch -> Codex spawn_agent -> wait_agent; never send it to relay route/run or an external CLI. Without a named model, inspect ready native profiles and choose the one whose public purpose fits the task; use dispatch --auto for a unique or provider/model-name match, and ask only when candidates remain tied. Configure a native-provider from Base URL + Model ID + API Key (key via stdin only, never on the command line); preserve raw output for Codex review."

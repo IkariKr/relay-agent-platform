@@ -1,0 +1,13 @@
+# deepseek-v4-flash.toml — DeepSeek V4 Flash 独立 agent overlay（pack 自持，不写主 provider/model）。
+# Pack-owned overlay; never touches the main agent's provider/model.
+# 注意：字段名与 role 注册语法以当前 Codex 版本实际支持为准（见 capability probe / B2 spike）；
+# 本文件只是 pack 内配置形态示例，安装前必须经配置解析验证。
+model_provider = "deepseek"
+model = "<provider-model-id>"
+sandbox_mode = "read-only"
+
+[model_providers.deepseek]
+name = "DeepSeek"
+base_url = "<responses-compatible-endpoint>"
+wire_api = "responses"
+env_key = "DEEPSEEK_API_KEY"

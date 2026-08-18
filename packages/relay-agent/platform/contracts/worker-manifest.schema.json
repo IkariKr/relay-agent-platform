@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://relay.local/contracts/worker-manifest.schema.json",
+  "title": "Worker Manifest",
+  "description": "统一 Worker 描述合同（roadmap §2.1）。external-cli 通过 ExternalCliWorkerAdapter 从 legacy backend.json 归一化；native-provider 必须直接满足本 schema 且不得携带 command/runner_script。Unified worker contract; external-cli workers are normalized from legacy backend.json by the adapter, native-provider manifests must satisfy this schema directly and must NOT carry command/runner_script.",
+  "type": "object",
+  "required": [
+    "id",
+    "display_name",
+    "runtime_type",
+    "purpose",
+    "host_requirements",
+    "data_boundary",
+    "permissions",
+    "install_contract",
+    "health_check",
+    "smoke_test",
+    "uninstall_contract"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "display_name": { "type": "string" },
+    "runtime_type": {
+      "enum": ["native-provider", "external-cli"]
+    },
+    "purpose": { "type": "string" },
+    "host_requirements": { "type": "object" },
+    "data_boundary": {
+      "type": "object",
+      "required": ["execution_boundary", "egress", "sensitive_auto_dispatch"],
+      "properties": {
+        "execution_boundary": { "enum": ["external-process", "codex-native-child", "local-process"] },
+        "egress": { "enum": ["unknown-or-provider-dependent", "external-transmit", "local-only"] },
+        "sensitive_auto_dispatch": { "enum": ["deny-unless-explicitly-classified", "allow"] }
+      }
+    },
+    "permissions": { "type": "object" },
+    "install_contract": { "type": "object" },
+    "health_check": { "type": "object" },
+    "smoke_test": { "type": "object" },
+    "uninstall_contract": { "type": "object" },
+    "command": {
+      "type": "string",
+      "description": "external-cli only; forbidden for native-provider (no fake CLI)."
+    },
+    "runner_script": {
+      "type": "string",
+      "description": "external-cli only; forbidden for native-provider."
+    },
+    "provider": {
+      "type": "object",
+      "required": ["provider_id", "model_id", "wire_api", "credential_source", "default_sandbox"],
+      "properties": {
+        "provider_id": { "type": "string" },
+        "model_id": { "type": "string" },
+        "wire_api": { "type": "string" },
+        "credential_source": { "type": "string" },
+        "default_sandbox": { "type": "string" }
+      }
+    },
+    "cli": {
+      "type": "object",
+      "description": "external-cli adapter output; native-provider manifests must not declare cli."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "runtime_type": { "const": "native-provider" } },
+        "required": ["runtime_type"]
+      },
+      "then": {
+        "required": ["provider"],
+        "not": { "required": ["command", "runner_script"] }
+      }
+    }
+  ]
+}

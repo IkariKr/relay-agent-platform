@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://relay.local/contracts/provider-profile.schema.json",
+  "title": "Provider Profile",
+  "description": "用户级 provider 配置实例合同（onboarding plan §4.2）。只保存 Base URL / Model ID 与 credential source 引用，绝不保存 secret 值；schema 通过 propertyNames 与 additionalProperties 双重禁止 secret 字段。User-level provider configuration instance; stores Base URL / Model ID and a credential source reference only. Secret values are forbidden by schema and by store-level checks.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "profile_id",
+    "worker_id",
+    "provider_id",
+    "base_url",
+    "model_id",
+    "wire_api",
+    "credential_source",
+    "managed_by",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "profile_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "worker_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "provider_id": { "type": "string", "minLength": 1 },
+    "base_url": { "type": "string", "pattern": "^https?://" },
+    "model_id": { "type": "string", "minLength": 1 },
+    "wire_api": { "type": "string", "enum": ["responses"] },
+    "credential_source": { "type": "string", "pattern": "^env:[A-Za-z_][A-Za-z0-9_]*$" },
+    "managed_by": { "const": "relay-agent" },
+    "created_at": { "type": "string", "minLength": 1 },
+    "updated_at": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false,
+  "propertyNames": {
+    "not": {
+      "enum": ["api_key", "apiKey", "secret", "secret_value", "secretValue", "credential_value", "credentialValue", "credential"]
+    }
+  }
+}

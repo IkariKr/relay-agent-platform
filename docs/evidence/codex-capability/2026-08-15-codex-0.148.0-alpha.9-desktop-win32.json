@@ -1,0 +1,119 @@
+{
+  "probe_schema_version": "1.0",
+  "probe_run_id": "26697735668a4e81a36f2e5709941959",
+  "generated_at": "2026-08-15T14:58:40.5103797Z",
+  "host": {
+    "name": "win32",
+    "os_version": "10.0.26200",
+    "pwsh_version": "7.6.4"
+  },
+  "codex": {
+    "cli_version": "0.148.0-alpha.9",
+    "cli_source": "C:\\Users\\41382\\AppData\\Local\\Temp\\desktop-bin\\codex.exe"
+  },
+  "capabilities": {
+    "host_identity": {
+      "status": "supported",
+      "detail": "codex cli 0.148.0-alpha.9 on PATH",
+      "evidence": [
+        "C:\\Users\\41382\\AppData\\Local\\Temp\\desktop-bin\\codex.exe"
+      ]
+    },
+    "custom_agent_discovery": {
+      "status": "supported",
+      "detail": "config.toml present: agents=True model_providers=True hooks=False",
+      "evidence": [
+        "C:\\Users\\41382\\AppData\\Local\\Temp\\relay-b4-117f55da72a4481583bc63474bb68237\\config.toml"
+      ]
+    },
+    "custom_provider_load": {
+      "status": "supported",
+      "detail": "config.toml present: agents=True model_providers=True hooks=False",
+      "evidence": [
+        "C:\\Users\\41382\\AppData\\Local\\Temp\\relay-b4-117f55da72a4481583bc63474bb68237\\config.toml"
+      ]
+    },
+    "hook": {
+      "status": "unknown",
+      "detail": "config.toml present: agents=True model_providers=True hooks=False; [hooks] section absent (Codex may still support hooks)",
+      "evidence": []
+    },
+    "custom_agent_spawn": {
+      "status": "supported",
+      "detail": "live-verified: D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-cancel-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-cancel-2026-08-15.jsonl",
+      "evidence": [
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-cancel-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-cancel-2026-08-15.jsonl"
+      ]
+    },
+    "fork_isolation": {
+      "status": "supported",
+      "detail": "live-verified: D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-cancel-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-cancel-2026-08-15.jsonl",
+      "evidence": [
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-cancel-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-cancel-2026-08-15.jsonl"
+      ]
+    },
+    "native_wait_callback": {
+      "status": "supported",
+      "detail": "live-verified: D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-cancel-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-cancel-2026-08-15.jsonl",
+      "evidence": [
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-cancel-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-cancel-2026-08-15.jsonl"
+      ]
+    },
+    "native_cancel": {
+      "status": "supported",
+      "detail": "live-verified: D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-cancel-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-cancel-2026-08-15.jsonl",
+      "evidence": [
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-cancel-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-cancel-2026-08-15.jsonl"
+      ]
+    },
+    "plaintext_initial_message": {
+      "status": "supported",
+      "detail": "live-verified: D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-cancel-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-cancel-2026-08-15.jsonl",
+      "evidence": [
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-cancel-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-cancel-2026-08-15.jsonl"
+      ]
+    },
+    "plaintext_followup_message": {
+      "status": "supported",
+      "detail": "live-verified: D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-cancel-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-2026-08-15.jsonl; D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-cancel-2026-08-15.jsonl",
+      "evidence": [
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-cancel-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-cancel-2026-08-15.jsonl"
+      ]
+    },
+    "hook_additional_context": {
+      "status": "supported",
+      "detail": "hook not used; native plaintext transport verified (preferred path)",
+      "evidence": [
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-20260814.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-desktop-cancel-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-2026-08-15.jsonl",
+        "D:\\App\\01_Ai\\CodeX\\skills\\relay-agent-platform\\docs\\evidence\\transport\\b4-native-child-profile-suffix-cancel-2026-08-15.jsonl"
+      ]
+    }
+  }
+}

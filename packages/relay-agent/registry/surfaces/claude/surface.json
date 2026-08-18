@@ -10,9 +10,9 @@
   "allowed_backends": [
     "claude"
   ],
-  "public_scripts": ["scripts/run_relay.ps1"],
+  "public_scripts": ["scripts/run_relay.ps1", "scripts/relay.ps1", "scripts/relay.cmd"],
   "public_assets": [],
   "package_root": "packages/relay-claude",
-  "doc_entry": "docs/quickstart.md",
+  "doc_entry": "docs/Archive/quickstart.md",
   "notes_backend": "claude"
 }
